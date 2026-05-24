@@ -1,0 +1,158 @@
+{
+    "services": [
+        {
+            "id": "tg_boost",
+            "name": "🚀 Telegram Boost",
+            "category": "main",
+            "items": [
+                {
+                    "id": "tg_boost_1k",
+                    "label": "1,000 Subscribers",
+                    "price": 7000,
+                    "unit": "ks"
+                },
+                {
+                    "id": "tg_boost_500",
+                    "label": "500 Subscribers",
+                    "price": 4000,
+                    "unit": "ks"
+                },
+                {
+                    "id": "tg_boost_100",
+                    "label": "100 Subscribers",
+                    "price": 1000,
+                    "unit": "ks"
+                }
+            ]
+        },
+        {
+            "id": "tiktok",
+            "name": "🎵 TikTok Like/View",
+            "category": "main",
+            "items": [
+                {
+                    "id": "tiktok_like_1k",
+                    "label": "1,000 Likes",
+                    "price": 2000,
+                    "unit": "ks"
+                },
+                {
+                    "id": "tiktok_view_1k",
+                    "label": "1,000 Views",
+                    "price": 1500,
+                    "unit": "ks"
+                },
+                {
+                    "id": "tiktok_like_5k",
+                    "label": "5,000 Likes",
+                    "price": 9000,
+                    "unit": "ks"
+                }
+            ]
+        },
+        {
+            "id": "tg_star",
+            "name": "⭐ Telegram Stars",
+            "category": "main",
+            "items": [
+                {
+                    "id": "tg_star_50",
+                    "label": "50 Stars",
+                    "price": 3000,
+                    "unit": "ks"
+                },
+                {
+                    "id": "tg_star_100",
+                    "label": "100 Stars",
+                    "price": 5500,
+                    "unit": "ks"
+                },
+                {
+                    "id": "tg_star_500",
+                    "label": "500 Stars",
+                    "price": 25000,
+                    "unit": "ks"
+                }
+            ]
+        },
+        {
+            "id": "dia",
+            "name": "💎 Diamonds (Dia)",
+            "category": "main",
+            "items": [
+                {
+                    "id": "dia_100",
+                    "label": "100 Diamonds",
+                    "price": 2500,
+                    "unit": "ks"
+                },
+                {
+                    "id": "dia_500",
+                    "label": "500 Diamonds",
+                    "price": 12000,
+                    "unit": "ks"
+                },
+                {
+                    "id": "dia_1000",
+                    "label": "1,000 Diamonds",
+                    "price": 23000,
+                    "unit": "ks"
+                }
+            ]
+        },
+        {
+            "id": "uc",
+            "name": "🎮 UC (PUBG)",
+            "category": "main",
+            "items": [
+                {
+                    "id": "uc_60",
+                    "label": "60 UC",
+                    "price": 1500,
+                    "unit": "ks"
+                },
+                {
+                    "id": "uc_325",
+                    "label": "325 UC",
+                    "price": 7000,
+                    "unit": "ks"
+                },
+                {
+                    "id": "uc_660",
+                    "label": "660 UC",
+                    "price": 13000,
+                    "unit": "ks"
+                }
+            ]
+        },
+        {
+            "id": "others",
+            "name": "📦 အခြား Services များ",
+            "category": "contact",
+            "items": [
+                {
+                    "id": "others_tg_acc",
+                    "label": "Telegram Account",
+                    "price": 0,
+                    "unit": "",
+                    "requireContact": true
+                },
+                {
+                    "id": "others_premium",
+                    "label": "Telegram Premium",
+                    "price": 0,
+                    "unit": "",
+                    "requireContact": true
+                },
+                {
+                    "id": "others_custom",
+                    "label": "တခြား Services",
+                    "price": 0,
+                    "unit": "",
+                    "requireContact": true
+                }
+            ]
+        }
+    ],
+    "orders": []
+}
