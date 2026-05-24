@@ -1,4 +1,5 @@
 import { Bot, Context, session, SessionFlavor, InlineKeyboard } from "grammy";
+import { JsonDbSessionStorage } from "./session-storage";
 import { logger } from "../lib/logger";
 import {
   getServices,
@@ -51,6 +52,7 @@ export function createBot() {
   bot.use(
     session({
       initial: (): SessionData => ({}),
+      storage: new JsonDbSessionStorage<SessionData>(),
     })
   );
 
