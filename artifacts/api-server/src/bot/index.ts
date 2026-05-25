@@ -31,6 +31,7 @@ import {
   formatOrderSummary,
   formatReceiptNotification,
   isOwner,
+  mgFooter,
 } from "./helpers";
 import { bs } from "./font";
 
@@ -437,22 +438,20 @@ export function createBot() {
         `✨ <b>${bs("Order Completed!")}</b>\n\n` +
         `🆔 ${bs("Order ID")}: <code>${escHtml(order.orderId)}</code>\n` +
         `📦 ${bs("Service")}: ${escHtml(order.serviceName)}\n` +
-        `🎯 ${bs("Package")}: ${escHtml(order.itemLabel)}\n\n`;
+        `🎯 ${bs("Package")}: ${escHtml(order.itemLabel)}\n`;
 
       if (ctx.message && "photo" in ctx.message && ctx.message.photo) {
         const photos = ctx.message.photo;
         const fileId = photos[photos.length - 1].file_id;
-        const cap = ctx.message.caption ? escHtml(ctx.message.caption) : "";
+        const cap = ctx.message.caption ? `\n📝 ${escHtml(ctx.message.caption)}\n` : "";
         await ctx.api.sendPhoto(order.userId, fileId, {
-          caption: doneCaption + (cap ? `📝 ${cap}\n\n` : "") + `ကျေးဇူးတင်ပါသည် 🙏 ${bs("MG Pizza Services")}`,
+          caption: doneCaption + cap + mgFooter,
           parse_mode: "HTML",
         });
       } else if (ctx.message && "text" in ctx.message) {
         await ctx.api.sendMessage(
           order.userId,
-          doneCaption +
-            `📝 ${escHtml(ctx.message.text)}\n\n` +
-            `ကျေးဇူးတင်ပါသည် 🙏 ${bs("MG Pizza Services")}`,
+          doneCaption + `\n📝 ${escHtml(ctx.message.text)}` + mgFooter,
           { parse_mode: "HTML" }
         );
       }
@@ -493,8 +492,8 @@ export function createBot() {
         `✅ <b>ငွေလက်ခံရရှိပါသည်</b>\n\n` +
           `🆔 ${bs("Order ID")}: <code>${escHtml(orderId)}</code>\n` +
           `📦 ${escHtml(order.serviceName)} — ${escHtml(order.itemLabel)}\n\n` +
-          `⚡ ထည့်သွင်းပြီးပါပြီ ✨\n\n` +
-          `ကျေးဇူးတင်ပါသည် 🙏 ${bs("MG Pizza Services")}`,
+          `⚡ ထည့်သွင်းပြီးပါပြီ ✨` +
+          mgFooter,
         { parse_mode: "HTML" }
       );
       await updateOrder(orderId, { status: "completed" });
@@ -506,7 +505,8 @@ export function createBot() {
         `✅ <b>ငွေလက်ခံရရှိပါသည်</b>\n\n` +
           `🆔 ${bs("Order ID")}: <code>${escHtml(orderId)}</code>\n` +
           `📦 ${escHtml(order.serviceName)} — ${escHtml(order.itemLabel)}\n\n` +
-          `⏳ ${bs("Order")} တင်ပြီးပါပြီ၊ ခနလေး စောင့်ပေးပါ 🙏`,
+          `⏳ ${bs("Order")} တင်ပြီးပါပြီ၊ ခနလေး စောင့်ပေးပါ 🙏` +
+          mgFooter,
         { parse_mode: "HTML" }
       );
       await updateOrder(orderId, { status: "processing" });

@@ -248,13 +248,29 @@
             "status": "pending_receipt",
             "createdAt": "2026-05-25T05:16:21.639Z",
             "updatedAt": "2026-05-25T05:16:21.639Z"
+        },
+        {
+            "orderId": "𝗢𝗥𝗗-MPKRNN55-IJC2",
+            "userId": 8646459264,
+            "username": "Lunanoyume",
+            "firstName": "♡ ʟᴜɴᴀ",
+            "serviceId": "tg_boost",
+            "serviceName": "🚀 Telegram Boost",
+            "itemId": "tg_boost_1k",
+            "itemLabel": "1,000 Subscribers",
+            "itemPrice": 7000,
+            "status": "completed",
+            "createdAt": "2026-05-25T05:29:04.745Z",
+            "updatedAt": "2026-05-25T05:30:01.350Z",
+            "targetInfo": "@gucuy",
+            "receiptFileId": "AgACAgUAAxkBAAMzahPeMaOADw8NU0upEJ_qUMTJmYwAAhoQaxtbVqBUd-gaxED8bjABAAMCAAN5AAM7BA",
+            "receiptCaption": "",
+            "messageId": 52,
+            "ownerMessageId": 53
         }
     ],
     "sessions": {
-        "8646459264": {
-            "pendingOrderId": "𝗢𝗥𝗗-MPKR7ABR-QSY1",
-            "step": "waiting_receipt"
-        },
+        "8646459264": {},
         "-1003916887393": {}
     }
 }
