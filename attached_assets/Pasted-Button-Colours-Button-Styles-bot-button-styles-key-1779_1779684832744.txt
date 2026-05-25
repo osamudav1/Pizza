@@ -1,0 +1,64 @@
+Button Colours (Button Styles) အသုံးပြုပုံ
+ဒီ bot မှာ button တွေကို အရောင် (styles) သတ်မှတ်ဖို့ `keyboards.ts` ထဲမှာ helper function တစ်ခု တည်ဆောက်ထားပါတယ်။ `primary`, `success`, နဲ့ `danger` ဆိုပြီး style (၃) မျိုး ခွဲခြားထားပါတယ်။
+
+Code Example:
+
+
+// Button style တွေကို သတ်မှတ်ခြင်း
+type ButtonStyle = "primary" | "success" | "danger";
+
+// Button ဖန်တီးပေးတဲ့ helper function
+function btn(text: string, callbackData: string, style?: ButtonStyle): any {
+  const b: any = { text, callback_data: callbackData };
+  if (style) b.style = style; // ဒီနေရာမှာ style (primary/success/danger) ထည့်ပေးတာပါ
+  return b;
+}
+
+// လက်တွေ့အသုံးပြုပုံ (Keyboards.ts ထဲမှ)
+export function starsKeyboard() {
+  return {
+    inline_keyboard: [
+      [btn("⭐ Send Stars", "stars_send", "success")], // အစိမ်းရောင် (Success)
+      [btn("◀ Back", "menu_main", "danger")],        // အနီရောင် (Danger)
+    ]
+  };
+}
+
+မှတ်ချက်: Telegram ရဲ့ standard bot API မှာ button အရောင် တိုက်ရိုက်ပြောင်းတာကို official အားလုံးမှာ မပံ့ပိုးသေးပေမယ့်၊ ဒီ bot ကတော့ style field ကို အသုံးပြုပြီး custom clients တွေမှာ အရောင်နဲ့ ပေါ်အောင် ပြင်ဆင်ထားတာ ဖြစ်ပါတယ်။
+
+
+၂။ Premium Emojis (Custom Emoji) အသုံးပြုပုံ
+ဒီ bot ရဲ့ ထူးခြားချက်ကတော့ ရိုးရိုး emoji တွေကို Telegram Premium Emoji တွေအဖြစ် message တိုင်းမှာ auto ပြောင်းပေးတာပါ။ ဒါကို `emojis.ts` နဲ့ `index.ts` ထဲမှာ transformer အနေနဲ့ ရေးထားပါတယ်။
+
+Code Example:
+
+
+// ၁။ Emoji ကို Premium Tag အဖြစ် ပြောင်းလဲပေးတဲ့ function (emojis.ts)
+export function applyPremiumEmojis(text: string): string {
+  // ဥပမာ: "⭐" ကို "<tg-emoji emoji-id='5368...'>⭐</tg-emoji>" အဖြစ် ပြောင်းပေးပါတယ်
+  // ဒီလိုပြောင်းဖို့အတွက် parse_mode ကို "HTML" သုံးဖို့ လိုအပ်ပါတယ်
+  const map = getPremiumEmojiMap();
+  let result = text;
+  for (const [emoji, id] of map.entries()) {
+    result = result.replaceAll(emoji, `<tg-emoji emoji-id="${id}">${emoji}</tg-emoji>`);
+  }
+  return result;
+}
+
+// ၂။ Bot က message ပို့တိုင်း auto အလုပ်လုပ်အောင် transformer ထည့်ထားပုံ (index.ts)
+bot.api.config.use(async (prev, method, payload, signal) => {
+  const p = payload as any;
+  if (p && typeof p.text === "string") {
+    const replaced = applyPremiumEmojis(p.text);
+    if (replaced !== p.text) { 
+      p.text = replaced; 
+      p.parse_mode = "HTML"; // Premium emoji သုံးရင် HTML mode ဖြစ်ရပါမယ်
+    }
+  }
+  return prev(method, payload, signal);
+});
+
+အသုံးပြုနည်း အကျဉ်းချုပ်:
+
+	•	Button Colors: `btn("စာသား", "callback_data", "style_အမည်")` ဆိုပြီး သုံးရပါတယ်။
+	•	Premium Emojis: Bot ထဲမှာ `/premium [emoji] [emoji_id]` ဆိုပြီး command နဲ့ mapping အရင်လုပ်ထားရပါတယ်။ အဲ့ဒီနောက် message ပို့တဲ့အခါ bot က auto premium emoji အဖြစ် ပြောင်းလဲပေးသွားမှာ ဖြစ်ပါတယ်။

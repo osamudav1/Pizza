@@ -9,12 +9,16 @@ import {
   addService,
   updateService,
   deleteService,
-  getPremiumEmojiTag,
-  setPremiumEmoji,
   type Order,
   type Service,
   type ServiceItem,
 } from "./db";
+import {
+  applyPremiumEmojis,
+  setPremiumEmojiMapping,
+  removePremiumEmojiMapping,
+  getPremiumEmojiMap,
+} from "./emojis";
 import {
   mainMenuKeyboard,
   serviceItemsKeyboard,
@@ -56,6 +60,23 @@ function escHtml(text: string): string {
 export function createBot() {
   const bot = new Bot<MyContext>(BOT_TOKEN!);
 
+  // ─── Premium Emoji Transformer ─────────────────────────────
+  bot.api.config.use(async (prev, method, payload, signal) => {
+    const p = payload as any;
+    if (p) {
+      for (const field of ["text", "caption"]) {
+        if (typeof p[field] === "string") {
+          const replaced = await applyPremiumEmojis(p[field]);
+          if (replaced !== p[field]) {
+            p[field] = replaced;
+            p.parse_mode = "HTML";
+          }
+        }
+      }
+    }
+    return prev(method, payload, signal);
+  });
+
   bot.use(
     session({
       initial: (): SessionData => ({}),
@@ -68,9 +89,8 @@ export function createBot() {
     ctx.session = {};
     const services = await getServices();
     const name = escHtml(ctx.from?.first_name || "Customer");
-    const star = await getPremiumEmojiTag("✨");
     await ctx.reply(
-      `${star} <b>မင်္ဂလာပါ ${name}!</b>\n\n` +
+      `✨ <b>မင်္ဂလာပါ ${name}!</b>\n\n` +
         `🛒 <b>${bs("MG Pizza Services")}</b> မှ ကြိုဆိုပါသည်\n\n` +
         `📌 ဝယ်ယူလိုသော ${bs("Service")} တစ်ခုကို ရွေးချယ်ပါ ⬇️`,
       { parse_mode: "HTML", reply_markup: mainMenuKeyboard(services) }
@@ -105,26 +125,56 @@ export function createBot() {
       await ctx.reply("❌ ခွင့်မပြုပါ");
       return;
     }
-    const arg = ctx.match?.trim();
-    if (arg) {
-      await setPremiumEmoji(arg);
-      const tag = await getPremiumEmojiTag("✨");
-      await ctx.reply(
-        `${tag} <b>${bs("Premium Emoji")} သတ်မှတ်ပြီးပါပြီ!</b>\n\n` +
-          `<b>${bs("Emoji ID")}:</b> <code>${escHtml(arg)}</code>`,
-        { parse_mode: "HTML" }
-      );
-    } else {
-      await ctx.reply(
-        `⭐ <b>${bs("Premium Emoji")} သတ်မှတ်ရန်</b>\n\n` +
-          `နည်းလမ်း ၁ — <b>Command:</b>\n` +
-          `<code>/premium 5368324170671202286</code>\n\n` +
-          `နည်းလမ်း ၂ — Custom emoji ပါသော message ပေးပို့ပါ\n` +
-          `(${bs("Bot")} က emoji ${bs("ID")} ကို auto-detect လုပ်မည်)`,
-        { parse_mode: "HTML" }
-      );
-      ctx.session.step = "waiting_premium_emoji";
+    const arg = ctx.match?.trim() || "";
+    const parts = arg.split(/\s+/);
+
+    // /premium list
+    if (parts[0] === "list") {
+      const map = await getPremiumEmojiMap();
+      if (map.size === 0) {
+        await ctx.reply(`📋 ${bs("Premium emoji")} မသတ်မှတ်ရသေးပါ`, { parse_mode: "HTML" });
+        return;
+      }
+      let text = `📋 <b>${bs("Premium Emoji Mappings")}</b>\n\n`;
+      for (const [emoji, id] of map.entries()) {
+        text += `${emoji} → <code>${escHtml(id)}</code>\n`;
+      }
+      await ctx.reply(text, { parse_mode: "HTML" });
+      return;
     }
+
+    // /premium clear ⭐
+    if (parts[0] === "clear" && parts[1]) {
+      await removePremiumEmojiMapping(parts[1]);
+      await ctx.reply(`✅ <code>${escHtml(parts[1])}</code> mapping ဖျက်ပြီးပါပြီ`, { parse_mode: "HTML" });
+      return;
+    }
+
+    // /premium ⭐ 5368324170671202286
+    if (parts.length >= 2) {
+      const emoji = parts[0];
+      const id = parts[1];
+      await setPremiumEmojiMapping(emoji, id);
+      await ctx.reply(
+        `✅ <b>${bs("Premium Emoji")} သတ်မှတ်ပြီးပါပြီ!</b>\n\n` +
+          `${emoji} → <code>${escHtml(id)}</code>\n\n` +
+          `ယခုမှစ၍ message များမှ <b>${emoji}</b> အားလုံး premium emoji အဖြစ် auto ပြောင်းသွားမည်`,
+        { parse_mode: "HTML" }
+      );
+      return;
+    }
+
+    // No args — show usage
+    await ctx.reply(
+      `⭐ <b>${bs("Premium Emoji")} Usage</b>\n\n` +
+        `<b>ထည့်ရန်:</b>\n<code>/premium ⭐ 5368324170671202286</code>\n\n` +
+        `<b>List ကြည့်ရန်:</b>\n<code>/premium list</code>\n\n` +
+        `<b>ဖျက်ရန်:</b>\n<code>/premium clear ⭐</code>\n\n` +
+        `💡 Emoji ID ကို BotFather → Emoji Status / Sticker Set မှ ယူနိုင်သည်\n` +
+        `သို့မဟုတ် premium emoji တစ်ခု ဒီ chat ထဲ send လုပ်ပါ — bot က auto-detect လုပ်မည်`,
+      { parse_mode: "HTML" }
+    );
+    ctx.session.step = "waiting_premium_emoji";
   });
 
   // ─── Callback: Service Selection ──────────────────────────
@@ -232,7 +282,6 @@ export function createBot() {
       );
     } else {
       ctx.session.step = "waiting_receipt";
-      const emojiTag = await getPremiumEmojiTag("✨");
       await ctx.editMessageText(
         formatOrderSummary({
           orderId,
@@ -240,7 +289,6 @@ export function createBot() {
           itemLabel: item.label,
           price: item.price,
           unit: item.unit,
-          emojiTag,
         }) +
           `\n\n💳 <b>${bs("KPay / Wave")} နံပါတ်:</b> <code>${KPAY_NUMBER}</code>\n\n` +
           `📸 ငွေလွှဲပြေစာ ဓာတ်ပုံ (သို့မဟုတ်) ငွေလွှဲ ${bs("screenshot")} ကို ဤနေရာတွင် ပို့ပေးပါ`,
@@ -259,11 +307,12 @@ export function createBot() {
       const customEmojiEntity = (entities || []).find((e: any) => e.type === "custom_emoji");
       if (customEmojiEntity && (customEmojiEntity as any).custom_emoji_id) {
         const emojiId = (customEmojiEntity as any).custom_emoji_id;
-        await setPremiumEmoji(emojiId);
-        const tag = await getPremiumEmojiTag("✨");
+        const msgText = ctx.message && "text" in ctx.message ? ctx.message.text || "" : "";
+        const emojiChar = [...msgText].find(c => c !== " ") || "✨";
+        await setPremiumEmojiMapping(emojiChar, emojiId);
         await ctx.reply(
-          `${tag} <b>${bs("Premium Emoji")} သတ်မှတ်ပြီးပါပြီ!</b>\n\n` +
-            `<b>${bs("Emoji ID")}:</b> <code>${escHtml(emojiId)}</code>`,
+          `✅ <b>${bs("Premium Emoji")} သတ်မှတ်ပြီးပါပြီ!</b>\n\n` +
+            `${emojiChar} → <code>${escHtml(emojiId)}</code>`,
           { parse_mode: "HTML" }
         );
         ctx.session.step = undefined;
@@ -294,7 +343,6 @@ export function createBot() {
       const order = await getOrder(ctx.session.pendingOrderId);
       if (!order) return;
 
-      const emojiTag = await getPremiumEmojiTag("✨");
       await ctx.reply(
         formatOrderSummary({
           orderId: order.orderId,
@@ -303,7 +351,6 @@ export function createBot() {
           price: order.itemPrice,
           unit: "ks",
           targetInfo,
-          emojiTag,
         }) +
           `\n\n💳 <b>${bs("KPay / Wave")} နံပါတ်:</b> <code>${KPAY_NUMBER}</code>\n\n` +
           `📸 ငွေလွှဲပြေစာ ဓာတ်ပုံ (သို့မဟုတ်) ${bs("screenshot")} ကို ဤနေရာတွင် ပို့ပေးပါ`,
@@ -375,9 +422,8 @@ export function createBot() {
       const order = await getOrder(ctx.session.pendingOrderId);
       if (!order) return;
 
-      const emojiTag = await getPremiumEmojiTag("✨");
       const doneCaption =
-        `${emojiTag} <b>${bs("Order Completed!")}</b>\n\n` +
+        `✨ <b>${bs("Order Completed!")}</b>\n\n` +
         `🆔 ${bs("Order ID")}: <code>${escHtml(order.orderId)}</code>\n` +
         `📦 ${bs("Service")}: ${escHtml(order.serviceName)}\n` +
         `🎯 ${bs("Package")}: ${escHtml(order.itemLabel)}\n\n`;
@@ -430,15 +476,13 @@ export function createBot() {
       try { await ctx.api.deleteMessage(order.userId, order.messageId); } catch {}
     }
 
-    const emojiTag = await getPremiumEmojiTag("✨");
-
     if (isInstant) {
       await ctx.api.sendMessage(
         order.userId,
         `✅ <b>ငွေလက်ခံရရှိပါသည်</b>\n\n` +
           `🆔 ${bs("Order ID")}: <code>${escHtml(orderId)}</code>\n` +
           `📦 ${escHtml(order.serviceName)} — ${escHtml(order.itemLabel)}\n\n` +
-          `⚡ ထည့်သွင်းပြီးပါပြီ ${emojiTag}\n\n` +
+          `⚡ ထည့်သွင်းပြီးပါပြီ ✨\n\n` +
           `ကျေးဇူးတင်ပါသည် 🙏 ${bs("MG Pizza Services")}`,
         { parse_mode: "HTML" }
       );

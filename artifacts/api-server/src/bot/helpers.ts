@@ -15,19 +15,17 @@ export function formatOrderSummary(params: {
   unit: string;
   targetInfo?: string;
   quantity?: string;
-  emojiTag?: string;
 }): string {
-  const star = params.emojiTag || "⭐";
-  let msg = `🧾 *${bs("Order Summary")}*\n`;
+  let msg = `🧾 <b>${bs("Order Summary")}</b>\n`;
   msg += `━━━━━━━━━━━━━━━━\n`;
-  msg += `🆔 ${bs("Order ID")}: \`${params.orderId}\`\n`;
+  msg += `🆔 ${bs("Order ID")}: <code>${params.orderId}</code>\n`;
   msg += `📦 ${bs("Service")}: ${params.serviceName}\n`;
   msg += `🎯 ${bs("Package")}: ${params.itemLabel}\n`;
   if (params.quantity) msg += `📊 ${bs("Quantity")}: ${params.quantity}\n`;
-  if (params.targetInfo) msg += `🔗 ${bs("Target")}: \`${params.targetInfo}\`\n`;
+  if (params.targetInfo) msg += `🔗 ${bs("Target")}: <code>${params.targetInfo}</code>\n`;
   msg += `💰 ${bs("Amount")}: ${params.price.toLocaleString()} ${params.unit}\n`;
   msg += `━━━━━━━━━━━━━━━━\n`;
-  msg += `${star} ${bs("MG Pizza Services")}`;
+  msg += `✨ ${bs("MG Pizza Services")}`;
   return msg;
 }
 
@@ -43,14 +41,14 @@ export function formatReceiptNotification(params: {
   targetInfo?: string;
 }): string {
   const userRef = params.username ? `@${params.username}` : params.firstName || `${bs("ID")}: ${params.userId}`;
-  let msg = `🔔 *ငွေလွှဲပြေစာ လက်ခံရရှိပါသည်*\n`;
+  let msg = `🔔 <b>ငွေလွှဲပြေစာ လက်ခံရရှိပါသည်</b>\n`;
   msg += `━━━━━━━━━━━━━━━━\n`;
   msg += `👤 ${bs("Customer")}: ${userRef}\n`;
-  msg += `🆔 ${bs("User ID")}: \`${params.userId}\`\n`;
-  msg += `🆔 ${bs("Order ID")}: \`${params.orderId}\`\n`;
+  msg += `🆔 ${bs("User ID")}: <code>${params.userId}</code>\n`;
+  msg += `🆔 ${bs("Order ID")}: <code>${params.orderId}</code>\n`;
   msg += `📦 ${bs("Service")}: ${params.serviceName}\n`;
   msg += `🎯 ${bs("Package")}: ${params.itemLabel}\n`;
-  if (params.targetInfo) msg += `🔗 ${bs("Target")}: \`${params.targetInfo}\`\n`;
+  if (params.targetInfo) msg += `🔗 ${bs("Target")}: <code>${params.targetInfo}</code>\n`;
   msg += `💰 ${bs("Amount")}: ${params.price.toLocaleString()} ${params.unit}\n`;
   msg += `━━━━━━━━━━━━━━━━\n`;
   msg += `⏳ စစ်ဆေးပြီး ${bs("confirm")} လုပ်ပေးပါ`;
