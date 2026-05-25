@@ -455,11 +455,41 @@
             "createdAt": "2026-05-25T09:40:08.763Z",
             "updatedAt": "2026-05-25T09:40:12.097Z",
             "targetInfo": "ြဖြဖ"
+        },
+        {
+            "orderId": "𝗢𝗥𝗗-MPL12TBT-NSIM",
+            "userId": 1735522859,
+            "username": "Osamu1123",
+            "firstName": "𝘖𝘴𝘢𝘮𝘶",
+            "serviceId": "dia",
+            "serviceName": "💎 Diamonds (Dia)",
+            "itemId": "dia_100",
+            "itemLabel": "100 Diamonds",
+            "itemPrice": 2500,
+            "status": "pending_receipt",
+            "createdAt": "2026-05-25T09:52:49.145Z",
+            "updatedAt": "2026-05-25T09:52:53.631Z",
+            "targetInfo": "ုထုထ"
+        },
+        {
+            "orderId": "𝗢𝗥𝗗-MPL13GOK-1SU0",
+            "userId": 1735522859,
+            "username": "Osamu1123",
+            "firstName": "𝘖𝘴𝘢𝘮𝘶",
+            "serviceId": "tg_star",
+            "serviceName": "⭐ Telegram Stars",
+            "itemId": "tg_star_50",
+            "itemLabel": "50 Stars",
+            "itemPrice": 3000,
+            "status": "pending_receipt",
+            "createdAt": "2026-05-25T09:53:19.413Z",
+            "updatedAt": "2026-05-25T09:53:20.502Z",
+            "targetInfo": "Harsh"
         }
     ],
     "sessions": {
         "1735522859": {
-            "pendingOrderId": "𝗢𝗥𝗗-MPL0MIM3-DAO7",
+            "pendingOrderId": "𝗢𝗥𝗗-MPL13GOK-1SU0",
             "step": "waiting_receipt"
         },
         "8646459264": {},

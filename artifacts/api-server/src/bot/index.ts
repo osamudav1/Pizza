@@ -81,6 +81,7 @@ export function createBot() {
         if (typeof p[field] === "string") {
           const replaced = await applyPremiumEmojis(p[field]);
           if (replaced !== p[field]) {
+            logger.info({ method, field }, "[premium-emoji] replaced emoji in outgoing message");
             p[field] = replaced;
             if (!p.parse_mode) p.parse_mode = "HTML";
           }
@@ -174,6 +175,74 @@ export function createBot() {
       return;
     }
 
+    // /premium emojis  → list every emoji used in bot messages + mapping status
+    if (parts[0] === "emojis") {
+      const BOT_EMOJIS: { emoji: string; where: string }[] = [
+        { emoji: "✨", where: "Welcome message" },
+        { emoji: "🍕", where: "Welcome / Footer" },
+        { emoji: "👤", where: "Welcome / Customer label" },
+        { emoji: "🛒", where: "Service menu" },
+        { emoji: "⬇️", where: "Service menu" },
+        { emoji: "📦", where: "Order Summary – Service" },
+        { emoji: "🎯", where: "Order Summary – Package" },
+        { emoji: "💰", where: "Order Summary – Amount" },
+        { emoji: "🧾", where: "Order Summary – Header" },
+        { emoji: "🆔", where: "Order Summary – Order/User ID" },
+        { emoji: "🔗", where: "Order Summary – Target" },
+        { emoji: "💳", where: "KPay / Wave prompt" },
+        { emoji: "📸", where: "Receipt upload prompt" },
+        { emoji: "🔔", where: "Owner notification" },
+        { emoji: "⏳", where: "Pending / Processing" },
+        { emoji: "✅", where: "Success messages" },
+        { emoji: "❌", where: "Error messages" },
+        { emoji: "📢", where: "Telegram Boost prompt" },
+        { emoji: "🎵", where: "TikTok prompt" },
+        { emoji: "⭐", where: "Telegram Star prompt" },
+        { emoji: "💎", where: "MLbb Diamond prompt" },
+        { emoji: "🎮", where: "PUBG UC prompt" },
+        { emoji: "📞", where: "Contact / Others" },
+        { emoji: "⚙️", where: "Admin panel" },
+      ];
+      const map = await getPremiumEmojiMap();
+      let text = `🎭 <b>Bot Emoji List</b>\n<i>premium ID map လုပ်လို့ ရတဲ့ emoji များ</i>\n\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+      for (const { emoji, where } of BOT_EMOJIS) {
+        const id = map.get(emoji);
+        const status = id ? `✅ <code>${escHtml(id.slice(0, 10))}…</code>` : `⬜ not mapped`;
+        text += `${emoji}  ${status}\n<i>${escHtml(where)}</i>\n\n`;
+      }
+      text += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+      text += `Map လုပ်ရန်: <code>/premium 🧾 &lt;ID&gt;</code>`;
+      await ctx.reply(text, { parse_mode: "HTML" });
+      return;
+    }
+
+    // /premium debug  → send test message showing raw tg-emoji HTML
+    if (parts[0] === "debug") {
+      const map = await getPremiumEmojiMap();
+      if (map.size === 0) {
+        await ctx.reply(`⚠️ Mapping မရှိသေးပါ — <code>/premium 🧾 &lt;ID&gt;</code> ကိုသုံးပါ`, { parse_mode: "HTML" });
+        return;
+      }
+      // Build a test sentence using all mapped emojis
+      let sample = "";
+      for (const [emoji] of map.entries()) sample += `${emoji} `;
+      sample = sample.trim() + " Order Summary Test";
+
+      const replaced = await applyPremiumEmojis(sample);
+
+      // Show raw HTML (escaped) so owner can confirm <tg-emoji> tags exist
+      await ctx.reply(
+        `🔍 <b>Debug: Raw HTML that gets sent to Telegram</b>\n\n` +
+          `<code>${escHtml(replaced)}</code>\n\n` +
+          `<b>Rendered version (below):</b>`,
+        { parse_mode: "HTML" }
+      );
+      // Send actual rendered version (transformer will also process this, but
+      // since it's already replaced above, no double-wrap happens)
+      await ctx.api.sendMessage(ctx.chat.id, replaced, { parse_mode: "HTML" });
+      return;
+    }
+
     // /premium <emoji> <id>  → map emoji to premium ID
     if (parts.length >= 2) {
       const emoji = parts[0];
@@ -186,7 +255,7 @@ export function createBot() {
       return;
     }
 
-    // /premium  → show manager UI
+    // /premium  → show manager UI + activate auto-detect
     const map = await getPremiumEmojiMap();
     let currentText = `📌 <b>Current Mappings:</b>\n`;
     if (map.size === 0) {
@@ -201,13 +270,17 @@ export function createBot() {
         `━━━━━━━━━━━━━━━━━━━━━━\n` +
         currentText +
         `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `💡 <b>Auto-detect:</b> Premium emoji တစ်ခုကို ယခု ဒီ chat ထဲ send လုပ်ပါ\n` +
+        `Bot က ID ကို auto map လုပ်ပေးမည်\n\n` +
         `📌 <b>Commands:</b>\n` +
-        `<code>/premium 🧾 5368324170671202286</code>\n→ emoji တစ်ခုကို premium ID နဲ့ map လုပ်\n\n` +
-        `<code>/premium remove 🧾</code>\n→ emoji တစ်ခုကို default ပြန်ပြောင်း\n\n` +
-        `<code>/premium clear</code>\n→ mapping အကုန် ဖျက်\n\n` +
-        `<code>/premium list</code>\n→ current mappings ကြည့်`,
+        `<code>/premium 🧾 &lt;ID&gt;</code> — manual map\n` +
+        `<code>/premium remove 🧾</code> — တစ်ခု ဖျက်\n` +
+        `<code>/premium clear</code> — အကုန် ဖျက်\n` +
+        `<code>/premium emojis</code> — bot emoji list\n` +
+        `<code>/premium debug</code> — စစ်ဆေး`,
       { parse_mode: "HTML" }
     );
+    ctx.session.step = "waiting_premium_emoji";
   });
 
   // ─── Callback: Service Selection ──────────────────────────
