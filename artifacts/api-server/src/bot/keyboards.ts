@@ -10,6 +10,8 @@ function btn(text: string, callbackData: string, style?: ButtonStyle): any {
   return b;
 }
 
+// ─── User Keyboards ──────────────────────────────────────
+
 export function mainMenuKeyboard(services: Service[]): InlineKeyboard {
   const kb = new InlineKeyboard();
   for (const svc of services) {
@@ -63,10 +65,68 @@ export function mgServiceButton(): InlineKeyboard {
   );
 }
 
+// ─── Admin Keyboards ─────────────────────────────────────
+
 export function adminMenuKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
-    .add(btn(`📋  ${bs("Service List")} ကြည့်`, "admin:list", "primary")).row()
-    .add(btn(`➕  ${bs("Service")} အသစ်ထည့်`, "admin:add", "success")).row()
-    .add(btn(`✏️  ${bs("Service")} ပြင်`, "admin:edit")).row()
-    .add(btn(`🗑️  ${bs("Service")} ဖျက်`, "admin:delete", "danger")).row();
+    .add(btn(`📋 Service List ကြည့်`, "admin:list", "primary")).row()
+    .add(btn(`➕ Service အသစ်ထည့်`, "admin:add", "success")).row()
+    .add(btn(`⚙️ Service စီမံ / ပြင် / ဖျက်`, "admin:svcs")).row();
+}
+
+export function adminServicesKeyboard(services: Service[]): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  for (const svc of services) {
+    kb.add(btn(svc.name, `admin:svc:${svc.id}`)).row();
+  }
+  kb.add(btn(`🔙 Admin Menu`, "admin:back")).row();
+  return kb;
+}
+
+export function adminServiceManageKeyboard(svc: Service): InlineKeyboard {
+  return new InlineKeyboard()
+    .add(btn(`✏️ Service Name ပြင်`, `admin:name:${svc.id}`)).row()
+    .add(btn(`📦 Items စီမံ (ထည့် / ပြင် / ဖျက်)`, `admin:items:${svc.id}`, "primary")).row()
+    .add(btn(`🗑️ Service ဖျက်`, `admin:del:${svc.id}`, "danger")).row()
+    .add(btn(`🔙 Services`, "admin:svcs")).row();
+}
+
+export function adminConfirmDeleteKeyboard(svcId: string): InlineKeyboard {
+  return new InlineKeyboard()
+    .add(btn(`✅ ဟုတ်ကဲ့ ဖျက်မည်`, `admin:del_ok:${svcId}`, "danger")).row()
+    .add(btn(`❌ မဖျက်တော့`, `admin:svc:${svcId}`)).row();
+}
+
+export function adminServiceItemsKeyboard(svc: Service): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  for (const item of svc.items) {
+    const label = item.requireContact
+      ? `📞 ${item.label}`
+      : `${item.label} — ${item.price.toLocaleString()} ks`;
+    kb.add(btn(label, `admin:item:${svc.id}:${item.id}`)).row();
+  }
+  kb.add(btn(`➕ Item အသစ်ထည့်`, `admin:iadd:${svc.id}`, "success")).row()
+    .add(btn(`🔙 Service`, `admin:svc:${svc.id}`)).row();
+  return kb;
+}
+
+export function adminItemManageKeyboard(svcId: string, itemId: string): InlineKeyboard {
+  return new InlineKeyboard()
+    .add(btn(`✏️ Label ပြင်`, `admin:ilabel:${svcId}:${itemId}`)).row()
+    .add(btn(`💰 Price ပြင်`, `admin:iprice:${svcId}:${itemId}`)).row()
+    .add(btn(`🗑️ Item ဖျက်`, `admin:idel:${svcId}:${itemId}`, "danger")).row()
+    .add(btn(`🔙 Items`, `admin:items:${svcId}`)).row();
+}
+
+export function adminCategoryKeyboard(): InlineKeyboard {
+  return new InlineKeyboard()
+    .add(btn(`🛒 Main (ငွေပေး order)`, "admin:cat:main", "success")).row()
+    .add(btn(`📞 Contact (owner ဆက်သွယ်)`, "admin:cat:contact")).row()
+    .add(btn(`❌ ဖျက်မည်`, "admin:cancel")).row();
+}
+
+export function adminAddMoreItemsKeyboard(): InlineKeyboard {
+  return new InlineKeyboard()
+    .add(btn(`✅ ပြီးပြီ — Service သိမ်းမည်`, "admin:add_done", "success")).row()
+    .add(btn(`❌ ဖျက်မည်`, "admin:cancel")).row();
 }

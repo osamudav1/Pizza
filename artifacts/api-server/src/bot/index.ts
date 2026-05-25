@@ -25,6 +25,13 @@ import {
   ownerOrderKeyboard,
   ownerDoneKeyboard,
   adminMenuKeyboard,
+  adminServicesKeyboard,
+  adminServiceManageKeyboard,
+  adminConfirmDeleteKeyboard,
+  adminServiceItemsKeyboard,
+  adminItemManageKeyboard,
+  adminCategoryKeyboard,
+  adminAddMoreItemsKeyboard,
   mgServiceButton,
   contactOwnerKeyboard,
 } from "./keyboards";
@@ -43,6 +50,7 @@ interface SessionData {
   adminStep?: string;
   newService?: Partial<Service>;
   editServiceId?: string;
+  editItemId?: string;
   editField?: string;
 }
 
@@ -73,7 +81,7 @@ export function createBot() {
           const replaced = await applyPremiumEmojis(p[field]);
           if (replaced !== p[field]) {
             p[field] = replaced;
-            p.parse_mode = "HTML";
+            if (!p.parse_mode) p.parse_mode = "HTML";
           }
         }
       }
@@ -116,6 +124,7 @@ export function createBot() {
       await ctx.reply("❌ ခွင့်မပြုပါ");
       return;
     }
+    ctx.session = {};
     await ctx.reply(
       `⚙️ <b>${bs("Admin Panel")}</b>\n\n${bs("Service")} များ စီမံခန့်ခွဲရန်:`,
       { parse_mode: "HTML", reply_markup: adminMenuKeyboard() }
@@ -131,7 +140,6 @@ export function createBot() {
     const arg = ctx.match?.trim() || "";
     const parts = arg.split(/\s+/);
 
-    // /premium list
     if (parts[0] === "list") {
       const map = await getPremiumEmojiMap();
       if (map.size === 0) {
@@ -146,14 +154,12 @@ export function createBot() {
       return;
     }
 
-    // /premium clear ⭐
     if (parts[0] === "clear" && parts[1]) {
       await removePremiumEmojiMapping(parts[1]);
       await ctx.reply(`✅ <code>${escHtml(parts[1])}</code> mapping ဖျက်ပြီးပါပြီ`, { parse_mode: "HTML" });
       return;
     }
 
-    // /premium ⭐ 5368324170671202286
     if (parts.length >= 2) {
       const emoji = parts[0];
       const id = parts[1];
@@ -167,14 +173,12 @@ export function createBot() {
       return;
     }
 
-    // No args — show usage
     await ctx.reply(
       `⭐ <b>${bs("Premium Emoji")} Usage</b>\n\n` +
         `<b>ထည့်ရန်:</b>\n<code>/premium ⭐ 5368324170671202286</code>\n\n` +
         `<b>List ကြည့်ရန်:</b>\n<code>/premium list</code>\n\n` +
         `<b>ဖျက်ရန်:</b>\n<code>/premium clear ⭐</code>\n\n` +
-        `💡 Emoji ID ကို BotFather → Emoji Status / Sticker Set မှ ယူနိုင်သည်\n` +
-        `သို့မဟုတ် premium emoji တစ်ခု ဒီ chat ထဲ send လုပ်ပါ — bot က auto-detect လုပ်မည်`,
+        `💡 Premium emoji တစ်ခု ဒီ chat ထဲ send လုပ်ပါ — bot က auto-detect လုပ်မည်`,
       { parse_mode: "HTML" }
     );
     ctx.session.step = "waiting_premium_emoji";
@@ -325,16 +329,16 @@ export function createBot() {
         return;
       } else {
         await ctx.reply(
-          `❌ ${bs("Custom emoji")} မတွေ့ပါ။ Premium emoji ကို တိုက်ရိုက်ပေးပို့ပါ\nသို့မဟုတ် <code>/premium [ID]</code> သုံးပါ`,
+          `❌ ${bs("Custom emoji")} မတွေ့ပါ။ Premium emoji ကို တိုက်ရိုက်ပေးပို့ပါ\nသို့မဟုတ် <code>/premium [emoji] [ID]</code> သုံးပါ`,
           { parse_mode: "HTML" }
         );
         return;
       }
     }
 
-    // ── Admin flow ──
+    // ── Admin text input flow ──
     if (isOwner(ctx, OWNER_CHAT_ID) && ctx.session.adminStep) {
-      await handleAdminInput(ctx, ownerChatId);
+      await handleAdminInput(ctx);
       return;
     }
 
@@ -404,7 +408,6 @@ export function createBot() {
         targetInfo: order.targetInfo,
       });
 
-      // ── GP group: receipt photo only (no caption) ──
       if (receiptFileId && GROUP_CHAT_ID) {
         try {
           await ctx.api.sendPhoto(GROUP_CHAT_ID, receiptFileId);
@@ -413,7 +416,6 @@ export function createBot() {
         }
       }
 
-      // ── Owner DM: full notification with confirm/reject buttons ──
       let ownerMsg;
       if (receiptFileId) {
         ownerMsg = await ctx.api.sendPhoto(ownerChatId, receiptFileId, {
@@ -559,202 +561,491 @@ export function createBot() {
     );
   });
 
-  // ─── Admin Callbacks ───────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // ─── Admin Callbacks (Button-Based) ───────────────────────
+  // ═══════════════════════════════════════════════════════════
+
+  // ─── Admin: Back to Menu ───────────────────────────────────
+  bot.callbackQuery("admin:back", async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    await ctx.answerCallbackQuery();
+    ctx.session.adminStep = undefined;
+    ctx.session.newService = undefined;
+    ctx.session.editServiceId = undefined;
+    ctx.session.editItemId = undefined;
+    try {
+      await ctx.editMessageText(
+        `⚙️ <b>${bs("Admin Panel")}</b>\n\n${bs("Service")} များ စီမံခန့်ခွဲရန်:`,
+        { parse_mode: "HTML", reply_markup: adminMenuKeyboard() }
+      );
+    } catch {
+      await ctx.reply(
+        `⚙️ <b>${bs("Admin Panel")}</b>\n\n${bs("Service")} များ စီမံခန့်ခွဲရန်:`,
+        { parse_mode: "HTML", reply_markup: adminMenuKeyboard() }
+      );
+    }
+  });
+
+  // ─── Admin: Cancel ─────────────────────────────────────────
+  bot.callbackQuery("admin:cancel", async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    await ctx.answerCallbackQuery();
+    ctx.session.adminStep = undefined;
+    ctx.session.newService = undefined;
+    ctx.session.editServiceId = undefined;
+    ctx.session.editItemId = undefined;
+    await ctx.reply(
+      `⚙️ <b>${bs("Admin Panel")}</b>\n\n${bs("Service")} များ စီမံခန့်ခွဲရန်:`,
+      { parse_mode: "HTML", reply_markup: adminMenuKeyboard() }
+    );
+  });
+
+  // ─── Admin: Service List ───────────────────────────────────
   bot.callbackQuery("admin:list", async (ctx) => {
     if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
     await ctx.answerCallbackQuery();
     const services = await getServices();
     let text = `📋 <b>${bs("Service List")}</b>\n\n`;
     for (const svc of services) {
-      text += `🔹 <b>${escHtml(svc.name)}</b> (<${bs("ID")}: <code>${escHtml(svc.id)}</code>)\n`;
+      text += `🔹 <b>${escHtml(svc.name)}</b>  <code>${escHtml(svc.id)}</code>\n`;
       for (const item of svc.items) {
         if (item.requireContact) {
-          text += `  • ${escHtml(item.label)} — ${bs("Contact")}\n`;
+          text += `  • ${escHtml(item.label)} — Contact\n`;
         } else {
           text += `  • ${escHtml(item.label)} — ${item.price.toLocaleString()} ks\n`;
         }
       }
       text += `\n`;
     }
-    await ctx.reply(text, { parse_mode: "HTML" });
+    await ctx.reply(text, { parse_mode: "HTML", reply_markup: adminMenuKeyboard() });
   });
 
+  // ─── Admin: Start Add Service ──────────────────────────────
   bot.callbackQuery("admin:add", async (ctx) => {
     if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
     await ctx.answerCallbackQuery();
-    ctx.session.adminStep = "add_service_id";
-    ctx.session.newService = {};
+    ctx.session.adminStep = "add_id";
+    ctx.session.newService = { items: [] };
     await ctx.reply(
       `➕ <b>${bs("Service")} အသစ်ထည့်</b>\n\n` +
-        `${bs("Service ID")} ရိုက်ထည့်ပါ (emoji မပါဘဲ, underscore သုံးပါ)\n` +
+        `${bs("Service ID")} ရိုက်ပါ (emoji မပါဘဲ၊ underscore သုံးပါ)\n` +
         `ဥပမာ: <code>facebook_like</code>`,
       { parse_mode: "HTML" }
     );
   });
 
-  bot.callbackQuery("admin:edit", async (ctx) => {
+  // ─── Admin: Services List (for selection) ─────────────────
+  bot.callbackQuery("admin:svcs", async (ctx) => {
     if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
     await ctx.answerCallbackQuery();
-    ctx.session.adminStep = "edit_choose_service";
     const services = await getServices();
-    let text = `✏️ <b>ဘယ် ${bs("Service")} ပြင်မလဲ?</b>\n\n${bs("Service ID")} ရိုက်ပါ:\n\n`;
-    for (const s of services) {
-      text += `• <code>${escHtml(s.id)}</code> — ${escHtml(s.name)}\n`;
+    try {
+      await ctx.editMessageText(
+        `⚙️ <b>${bs("Service")} ရွေးချယ်ပါ</b>`,
+        { parse_mode: "HTML", reply_markup: adminServicesKeyboard(services) }
+      );
+    } catch {
+      await ctx.reply(
+        `⚙️ <b>${bs("Service")} ရွေးချယ်ပါ</b>`,
+        { parse_mode: "HTML", reply_markup: adminServicesKeyboard(services) }
+      );
     }
-    await ctx.reply(text, { parse_mode: "HTML" });
   });
 
-  bot.callbackQuery("admin:delete", async (ctx) => {
+  // ─── Admin: Service Manage Menu ────────────────────────────
+  bot.callbackQuery(/^admin:svc:(.+)$/, async (ctx) => {
     if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
-    await ctx.answerCallbackQuery();
-    ctx.session.adminStep = "delete_service";
+    const svcId = ctx.match[1];
     const services = await getServices();
-    let text = `🗑️ <b>ဘယ် ${bs("Service")} ဖျက်မလဲ?</b>\n\n${bs("Service ID")} ရိုက်ပါ:\n\n`;
-    for (const s of services) {
-      text += `• <code>${escHtml(s.id)}</code> — ${escHtml(s.name)}\n`;
+    const svc = services.find((s) => s.id === svcId);
+    if (!svc) { await ctx.answerCallbackQuery("မတွေ့ပါ"); return; }
+    await ctx.answerCallbackQuery();
+    try {
+      await ctx.editMessageText(
+        `⚙️ <b>${escHtml(svc.name)}</b>\n\nBurmese: ဘာလုပ်မလဲ?`,
+        { parse_mode: "HTML", reply_markup: adminServiceManageKeyboard(svc) }
+      );
+    } catch {
+      await ctx.reply(
+        `⚙️ <b>${escHtml(svc.name)}</b>\n\nဘာလုပ်မလဲ?`,
+        { parse_mode: "HTML", reply_markup: adminServiceManageKeyboard(svc) }
+      );
     }
-    await ctx.reply(text, { parse_mode: "HTML" });
   });
 
-  // ─── Admin Input Handler ───────────────────────────────────
-  async function handleAdminInput(ctx: MyContext, ownerChatId: number) {
+  // ─── Admin: Edit Name (prompt) ─────────────────────────────
+  bot.callbackQuery(/^admin:name:(.+)$/, async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    const svcId = ctx.match[1];
+    await ctx.answerCallbackQuery();
+    ctx.session.adminStep = "edit_name";
+    ctx.session.editServiceId = svcId;
+    await ctx.reply(
+      `✏️ <b>Service Name အသစ်</b> ရိုက်ပါ (emoji ထည့်လို့ရ):`,
+      { parse_mode: "HTML" }
+    );
+  });
+
+  // ─── Admin: Confirm Delete ─────────────────────────────────
+  bot.callbackQuery(/^admin:del:([^_].*)$/, async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    const svcId = ctx.match[1];
+    const services = await getServices();
+    const svc = services.find((s) => s.id === svcId);
+    if (!svc) { await ctx.answerCallbackQuery("မတွေ့ပါ"); return; }
+    await ctx.answerCallbackQuery();
+    try {
+      await ctx.editMessageText(
+        `🗑️ <b>${escHtml(svc.name)}</b> ကို ဖျက်မှာ သေချာလား?\n\nဖျက်လိုက်ရင် ပြန်မရနိုင်ပါ!`,
+        { parse_mode: "HTML", reply_markup: adminConfirmDeleteKeyboard(svcId) }
+      );
+    } catch {
+      await ctx.reply(
+        `🗑️ <b>${escHtml(svc.name)}</b> ကို ဖျက်မှာ သေချာလား?`,
+        { parse_mode: "HTML", reply_markup: adminConfirmDeleteKeyboard(svcId) }
+      );
+    }
+  });
+
+  // ─── Admin: Execute Delete ─────────────────────────────────
+  bot.callbackQuery(/^admin:del_ok:(.+)$/, async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    const svcId = ctx.match[1];
+    await deleteService(svcId);
+    await ctx.answerCallbackQuery(`✅ ဖျက်ပြီးပါပြီ!`);
+    const services = await getServices();
+    try {
+      await ctx.editMessageText(
+        `✅ <b>Service ဖျက်ပြီးပါပြီ</b>\n\n⚙️ <b>${bs("Admin Panel")}</b>:`,
+        { parse_mode: "HTML", reply_markup: adminMenuKeyboard() }
+      );
+    } catch {
+      await ctx.reply(
+        `✅ <b>Service ဖျက်ပြီးပါပြီ</b>`,
+        { parse_mode: "HTML", reply_markup: adminMenuKeyboard() }
+      );
+    }
+  });
+
+  // ─── Admin: Service Items List ─────────────────────────────
+  bot.callbackQuery(/^admin:items:(.+)$/, async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    const svcId = ctx.match[1];
+    const services = await getServices();
+    const svc = services.find((s) => s.id === svcId);
+    if (!svc) { await ctx.answerCallbackQuery("မတွေ့ပါ"); return; }
+    await ctx.answerCallbackQuery();
+    const itemCount = svc.items.length;
+    try {
+      await ctx.editMessageText(
+        `📦 <b>${escHtml(svc.name)}</b> — Items (${itemCount} ခု)\n\nItem တစ်ခု နှိပ်ပါ:`,
+        { parse_mode: "HTML", reply_markup: adminServiceItemsKeyboard(svc) }
+      );
+    } catch {
+      await ctx.reply(
+        `📦 <b>${escHtml(svc.name)}</b> — Items (${itemCount} ခု)\n\nItem တစ်ခု နှိပ်ပါ:`,
+        { parse_mode: "HTML", reply_markup: adminServiceItemsKeyboard(svc) }
+      );
+    }
+  });
+
+  // ─── Admin: Add Item to Existing Service (prompt) ─────────
+  bot.callbackQuery(/^admin:iadd:(.+)$/, async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    const svcId = ctx.match[1];
+    const services = await getServices();
+    const svc = services.find((s) => s.id === svcId);
+    if (!svc) { await ctx.answerCallbackQuery("မတွေ့ပါ"); return; }
+    await ctx.answerCallbackQuery();
+    ctx.session.adminStep = "add_item_to_svc";
+    ctx.session.editServiceId = svcId;
+    const isContact = svc.category === "contact";
+    await ctx.reply(
+      `➕ <b>${escHtml(svc.name)}</b> — Item အသစ်ထည့်\n\n` +
+        (isContact
+          ? `Label ရိုက်ပါ:\nဥပမာ: <code>Telegram Premium</code>`
+          : `Format: <code>label|price</code>\nဥပမာ: <code>1,000 Likes|2000</code>`),
+      { parse_mode: "HTML" }
+    );
+  });
+
+  // ─── Admin: Item Manage Menu ────────────────────────────────
+  bot.callbackQuery(/^admin:item:([^:]+):(.+)$/, async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    const svcId = ctx.match[1];
+    const itemId = ctx.match[2];
+    const services = await getServices();
+    const svc = services.find((s) => s.id === svcId);
+    const item = svc?.items.find((i) => i.id === itemId);
+    if (!svc || !item) { await ctx.answerCallbackQuery("မတွေ့ပါ"); return; }
+    await ctx.answerCallbackQuery();
+    const priceInfo = item.requireContact ? `📞 Contact` : `💰 ${item.price.toLocaleString()} ks`;
+    try {
+      await ctx.editMessageText(
+        `📦 <b>${escHtml(item.label)}</b>\n${priceInfo}\n\nဘာလုပ်မလဲ?`,
+        { parse_mode: "HTML", reply_markup: adminItemManageKeyboard(svcId, itemId) }
+      );
+    } catch {
+      await ctx.reply(
+        `📦 <b>${escHtml(item.label)}</b>\n${priceInfo}\n\nဘာလုပ်မလဲ?`,
+        { parse_mode: "HTML", reply_markup: adminItemManageKeyboard(svcId, itemId) }
+      );
+    }
+  });
+
+  // ─── Admin: Edit Item Price (prompt) ──────────────────────
+  bot.callbackQuery(/^admin:iprice:([^:]+):(.+)$/, async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    const svcId = ctx.match[1];
+    const itemId = ctx.match[2];
+    await ctx.answerCallbackQuery();
+    ctx.session.adminStep = "edit_price";
+    ctx.session.editServiceId = svcId;
+    ctx.session.editItemId = itemId;
+    await ctx.reply(`💰 <b>Price အသစ်</b> ရိုက်ပါ (ks):\nဥပမာ: <code>2500</code>`, { parse_mode: "HTML" });
+  });
+
+  // ─── Admin: Edit Item Label (prompt) ──────────────────────
+  bot.callbackQuery(/^admin:ilabel:([^:]+):(.+)$/, async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    const svcId = ctx.match[1];
+    const itemId = ctx.match[2];
+    await ctx.answerCallbackQuery();
+    ctx.session.adminStep = "edit_label";
+    ctx.session.editServiceId = svcId;
+    ctx.session.editItemId = itemId;
+    await ctx.reply(`✏️ <b>Label အသစ်</b> ရိုက်ပါ:`, { parse_mode: "HTML" });
+  });
+
+  // ─── Admin: Delete Item ────────────────────────────────────
+  bot.callbackQuery(/^admin:idel:([^:]+):(.+)$/, async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    const svcId = ctx.match[1];
+    const itemId = ctx.match[2];
+    const services = await getServices();
+    const svc = services.find((s) => s.id === svcId);
+    if (!svc) { await ctx.answerCallbackQuery("မတွေ့ပါ"); return; }
+    const updatedItems = svc.items.filter((i) => i.id !== itemId);
+    await updateService(svcId, { items: updatedItems });
+    await ctx.answerCallbackQuery(`✅ Item ဖျက်ပြီးပါပြီ!`);
+    const updatedSvc = { ...svc, items: updatedItems };
+    try {
+      await ctx.editMessageText(
+        `📦 <b>${escHtml(svc.name)}</b> — Items (${updatedItems.length} ခု)\n\nItem တစ်ခု နှိပ်ပါ:`,
+        { parse_mode: "HTML", reply_markup: adminServiceItemsKeyboard(updatedSvc) }
+      );
+    } catch {
+      await ctx.reply(
+        `✅ Item ဖျက်ပြီးပါပြီ`,
+        { parse_mode: "HTML", reply_markup: adminServiceItemsKeyboard(updatedSvc) }
+      );
+    }
+  });
+
+  // ─── Admin: Category Selection Button ─────────────────────
+  bot.callbackQuery(/^admin:cat:(main|contact)$/, async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    const category = ctx.match[1];
+    if (!ctx.session.newService) { await ctx.answerCallbackQuery("❌ Session ပျောက်သွားပါပြီ"); return; }
+    await ctx.answerCallbackQuery();
+    ctx.session.newService.category = category;
+    ctx.session.adminStep = "add_items_first";
+    const isContact = category === "contact";
+    await ctx.reply(
+      `📦 <b>Item ပထမဆုံးထည့်ပါ</b>\n\n` +
+        (isContact
+          ? `Label ရိုက်ပါ:\nဥပမာ: <code>Telegram Premium</code>`
+          : `Format: <code>label|price</code>\nဥပမာ: <code>1,000 Likes|2000</code>`),
+      { parse_mode: "HTML" }
+    );
+  });
+
+  // ─── Admin: Save New Service ───────────────────────────────
+  bot.callbackQuery("admin:add_done", async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    const svc = ctx.session.newService as Service;
+    if (!svc?.id || !svc?.name) {
+      await ctx.answerCallbackQuery("❌ Service data မရှိပါ");
+      return;
+    }
+    if (!svc.items || svc.items.length === 0) {
+      await ctx.answerCallbackQuery("❌ Item အနည်းဆုံး ၁ ခုထည့်ပါ");
+      return;
+    }
+    await addService(svc);
+    ctx.session.adminStep = undefined;
+    ctx.session.newService = undefined;
+    await ctx.answerCallbackQuery(`✅ Service ထည့်ပြီးပါပြီ!`);
+    await ctx.reply(
+      `✅ <b>${escHtml(svc.name)}</b> Service ထည့်ပြီးပါပြီ!\n` +
+        `Items: ${svc.items.length} ခု`,
+      { parse_mode: "HTML", reply_markup: adminMenuKeyboard() }
+    );
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // ─── Admin Text Input Handler ──────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  async function handleAdminInput(ctx: MyContext) {
     const text = ctx.message && "text" in ctx.message ? ctx.message.text?.trim() : "";
     if (!text) return;
     const step = ctx.session.adminStep;
 
-    if (step === "add_service_id") {
-      ctx.session.newService = { id: text, items: [] };
-      ctx.session.adminStep = "add_service_name";
+    // ── Add service: step 1 — ID ──
+    if (step === "add_id") {
+      const id = text.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+      ctx.session.newService = { id, items: [] };
+      ctx.session.adminStep = "add_name";
       await ctx.reply(
-        `${bs("Service Name")} (emoji ထည့်လို့ရ) ရိုက်ပါ:\nဥပမာ: <code>🎯 Facebook Likes</code>`,
+        `✅ ID: <code>${escHtml(id)}</code>\n\n` +
+          `<b>Service Name</b> ရိုက်ပါ (emoji ထည့်လို့ရ):\nဥပမာ: <code>🎯 Facebook Likes</code>`,
         { parse_mode: "HTML" }
       );
-    } else if (step === "add_service_name") {
+
+    // ── Add service: step 2 — Name ──
+    } else if (step === "add_name") {
       ctx.session.newService!.name = text;
-      ctx.session.adminStep = "add_service_category";
+      ctx.session.adminStep = "add_category";
       await ctx.reply(
-        `${bs("Category")} ရွေးပါ:\n\n<code>main</code> — ငွေပေးပြီး ${bs("order")} တင်\n<code>contact</code> — ${bs("owner")} ဆီ တိုက်ရိုက်ဆက်သွယ်`,
-        { parse_mode: "HTML" }
+        `✅ Name: <b>${escHtml(text)}</b>\n\n<b>Category</b> ရွေးချယ်ပါ:`,
+        { parse_mode: "HTML", reply_markup: adminCategoryKeyboard() }
       );
-    } else if (step === "add_service_category") {
-      ctx.session.newService!.category = text === "contact" ? "contact" : "main";
-      ctx.session.adminStep = "add_service_items";
-      await ctx.reply(
-        `${bs("Items")} ထည့်ပါ (တစ်ကြောင်းချင်း):\n\n${bs("Format")}: <code>label|price</code>\nဥပမာ: <code>1,000 Likes|2000</code>\n\nပြီးရင် <code>done</code> ရိုက်ပါ`,
-        { parse_mode: "HTML" }
-      );
-    } else if (step === "add_service_items") {
-      if (text.toLowerCase() === "done") {
-        const svc = ctx.session.newService as Service;
-        if (!svc.items || svc.items.length === 0) {
-          await ctx.reply(`❌ ${bs("Item")} အနည်းဆုံး ၁ ခုထည့်ပါ`);
-          return;
-        }
-        await addService(svc);
-        ctx.session.adminStep = undefined;
-        ctx.session.newService = undefined;
-        await ctx.reply(`✅ <b>${escHtml(svc.name)}</b> ${bs("Service")} ထည့်ပြီးပါပြီ!`, { parse_mode: "HTML" });
+
+    // ── Add service: items (first or more) ──
+    } else if (step === "add_items_first" || step === "add_items_more") {
+      const isContact = ctx.session.newService?.category === "contact";
+      let newItem: ServiceItem;
+
+      if (isContact) {
+        newItem = {
+          id: `${ctx.session.newService!.id}_${Date.now()}`,
+          label: text,
+          price: 0,
+          unit: "",
+          requireContact: true,
+        };
       } else {
         const parts = text.split("|");
         if (parts.length < 2) {
-          await ctx.reply(`❌ ${bs("Format")} မှား။ <code>label|price</code> ဖြင့်ပြန်ရိုက်ပါ`, { parse_mode: "HTML" });
+          await ctx.reply(
+            `❌ Format မှား — <code>label|price</code> ဖြင့်ထည့်ပါ\nဥပမာ: <code>1,000 Likes|2000</code>`,
+            { parse_mode: "HTML" }
+          );
           return;
         }
         const label = parts[0].trim();
         const price = parseInt(parts[1].trim().replace(/[^0-9]/g, ""), 10);
-        const item: ServiceItem = {
+        newItem = {
           id: `${ctx.session.newService!.id}_${Date.now()}`,
-          label, price, unit: "ks",
-          requireContact: ctx.session.newService!.category === "contact",
+          label,
+          price,
+          unit: "ks",
         };
-        ctx.session.newService!.items = [...(ctx.session.newService!.items || []), item];
-        await ctx.reply(`✅ "${escHtml(label)}" ထည့်ပြီး။ ဆက်ထည့်နိုင်သည်၊ ပြီးရင် <code>done</code>`, { parse_mode: "HTML" });
       }
-    } else if (step === "edit_choose_service") {
-      const services = await getServices();
-      const svc = services.find((s) => s.id === text);
-      if (!svc) { await ctx.reply(`❌ ${bs("Service ID")} မတွေ့ပါ`); return; }
-      ctx.session.editServiceId = text;
-      ctx.session.adminStep = "edit_choose_field";
+
+      ctx.session.newService!.items = [...(ctx.session.newService!.items || []), newItem];
+      ctx.session.adminStep = "add_items_more";
+      const count = ctx.session.newService!.items!.length;
       await ctx.reply(
-        `✏️ <b>${escHtml(svc.name)}</b> — ဘာပြင်မလဲ?\n\n<code>name</code> — ${bs("Service Name")}\n<code>price</code> — ${bs("Item Price")}\n<code>item_add</code> — ${bs("Item")} ထည့်\n<code>item_del</code> — ${bs("Item")} ဖျက်`,
-        { parse_mode: "HTML" }
+        `✅ "<b>${escHtml(newItem.label)}</b>" ထည့်ပြီး (စုစုပေါင်း ${count} ခု)\n\nဆက်ထည့်နိုင်သည် သို့မဟုတ် ပြီးပြီ နှိပ်ပါ:`,
+        { parse_mode: "HTML", reply_markup: adminAddMoreItemsKeyboard() }
       );
-    } else if (step === "edit_choose_field") {
-      ctx.session.editField = text;
+
+    // ── Edit service name ──
+    } else if (step === "edit_name") {
+      const svcId = ctx.session.editServiceId!;
+      await updateService(svcId, { name: text });
+      ctx.session.adminStep = undefined;
+      ctx.session.editServiceId = undefined;
       const services = await getServices();
-      const svc = services.find((s) => s.id === ctx.session.editServiceId);
+      const svc = services.find((s) => s.id === svcId);
+      await ctx.reply(
+        `✅ Service Name "<b>${escHtml(text)}</b>" ပြင်ပြီးပါပြီ`,
+        { parse_mode: "HTML", reply_markup: svc ? adminServiceManageKeyboard(svc) : adminMenuKeyboard() }
+      );
+
+    // ── Add item to existing service ──
+    } else if (step === "add_item_to_svc") {
+      const svcId = ctx.session.editServiceId!;
+      const services = await getServices();
+      const svc = services.find((s) => s.id === svcId);
       if (!svc) return;
 
-      if (text === "name") {
-        ctx.session.adminStep = "edit_set_name";
-        await ctx.reply(`${bs("Service Name")} အသစ် ရိုက်ပါ:`);
-      } else if (text === "price") {
-        ctx.session.adminStep = "edit_choose_item";
-        let txt = `${bs("Item")} ရွေးပါ (${bs("ID")} ရိုက်):\n\n`;
-        for (const it of svc.items) {
-          txt += `• <code>${escHtml(it.id)}</code> — ${escHtml(it.label)} (${it.price.toLocaleString()} ks)\n`;
+      const isContact = svc.category === "contact";
+      let newItem: ServiceItem;
+
+      if (isContact) {
+        newItem = {
+          id: `${svcId}_${Date.now()}`,
+          label: text,
+          price: 0,
+          unit: "",
+          requireContact: true,
+        };
+      } else {
+        const parts = text.split("|");
+        if (parts.length < 2) {
+          await ctx.reply(
+            `❌ Format မှား — <code>label|price</code>\nဥပမာ: <code>1,000 Likes|2000</code>`,
+            { parse_mode: "HTML" }
+          );
+          return;
         }
-        await ctx.reply(txt, { parse_mode: "HTML" });
-      } else if (text === "item_add") {
-        ctx.session.adminStep = "edit_add_item";
-        ctx.session.newService = svc;
-        await ctx.reply(`${bs("Item")} အသစ် ထည့်ပါ:\n\n${bs("Format")}: <code>label|price</code>`, { parse_mode: "HTML" });
-      } else if (text === "item_del") {
-        ctx.session.adminStep = "edit_del_item";
-        let txt = `ဖျက်မည့် ${bs("Item ID")} ရိုက်ပါ:\n\n`;
-        for (const it of svc.items) {
-          txt += `• <code>${escHtml(it.id)}</code> — ${escHtml(it.label)}\n`;
-        }
-        await ctx.reply(txt, { parse_mode: "HTML" });
+        const label = parts[0].trim();
+        const price = parseInt(parts[1].trim().replace(/[^0-9]/g, ""), 10);
+        newItem = { id: `${svcId}_${Date.now()}`, label, price, unit: "ks" };
       }
-    } else if (step === "edit_set_name") {
-      await updateService(ctx.session.editServiceId!, { name: text });
+
+      const updatedItems = [...svc.items, newItem];
+      await updateService(svcId, { items: updatedItems });
       ctx.session.adminStep = undefined;
-      await ctx.reply(`✅ ${bs("Service Name")} "${escHtml(text)}" ပြင်ပြီးပါပြီ`, { parse_mode: "HTML" });
-    } else if (step === "edit_choose_item") {
-      ctx.session.adminStep = "edit_set_price";
-      ctx.session.editField = text;
-      await ctx.reply(`${bs("Price")} အသစ် ရိုက်ပါ (ks):`);
-    } else if (step === "edit_set_price") {
+      ctx.session.editServiceId = undefined;
+      const updatedSvc = { ...svc, items: updatedItems };
+      await ctx.reply(
+        `✅ "<b>${escHtml(newItem.label)}</b>" ထည့်ပြီးပါပြီ`,
+        { parse_mode: "HTML", reply_markup: adminServiceItemsKeyboard(updatedSvc) }
+      );
+
+    // ── Edit item price ──
+    } else if (step === "edit_price") {
       const newPrice = parseInt(text.replace(/[^0-9]/g, ""), 10);
+      const svcId = ctx.session.editServiceId!;
+      const itemId = ctx.session.editItemId!;
       const services = await getServices();
-      const svc = services.find((s) => s.id === ctx.session.editServiceId);
+      const svc = services.find((s) => s.id === svcId);
       if (svc) {
         const items = svc.items.map((it) =>
-          it.id === ctx.session.editField ? { ...it, price: newPrice } : it
+          it.id === itemId ? { ...it, price: newPrice } : it
         );
-        await updateService(ctx.session.editServiceId!, { items });
+        await updateService(svcId, { items });
+        ctx.session.adminStep = undefined;
+        ctx.session.editItemId = undefined;
+        const updatedSvc = { ...svc, items };
+        await ctx.reply(
+          `✅ Price <b>${newPrice.toLocaleString()} ks</b> ပြင်ပြီးပါပြီ`,
+          { parse_mode: "HTML", reply_markup: adminServiceItemsKeyboard(updatedSvc) }
+        );
       }
-      ctx.session.adminStep = undefined;
-      await ctx.reply(`✅ ${bs("Price")} ${newPrice.toLocaleString()} ks ပြင်ပြီးပါပြီ`);
-    } else if (step === "edit_add_item") {
-      const parts = text.split("|");
-      if (parts.length < 2) {
-        await ctx.reply(`❌ ${bs("Format")} မှား — <code>label|price</code>`, { parse_mode: "HTML" });
-        return;
-      }
-      const label = parts[0].trim();
-      const price = parseInt(parts[1].trim().replace(/[^0-9]/g, ""), 10);
-      const svc = ctx.session.newService!;
-      const newItem: ServiceItem = { id: `${svc.id}_${Date.now()}`, label, price, unit: "ks" };
-      const items = [...(svc.items ?? []), newItem];
-      await updateService(svc.id!, { items });
-      ctx.session.adminStep = undefined;
-      await ctx.reply(`✅ "${escHtml(label)}" ${bs("Item")} ထည့်ပြီးပါပြီ`, { parse_mode: "HTML" });
-    } else if (step === "edit_del_item") {
+
+    // ── Edit item label ──
+    } else if (step === "edit_label") {
+      const svcId = ctx.session.editServiceId!;
+      const itemId = ctx.session.editItemId!;
       const services = await getServices();
-      const svc = services.find((s) => s.id === ctx.session.editServiceId);
+      const svc = services.find((s) => s.id === svcId);
       if (svc) {
-        const items = svc.items.filter((it) => it.id !== text);
-        await updateService(svc.id, { items });
+        const items = svc.items.map((it) =>
+          it.id === itemId ? { ...it, label: text } : it
+        );
+        await updateService(svcId, { items });
+        ctx.session.adminStep = undefined;
+        ctx.session.editItemId = undefined;
+        const updatedSvc = { ...svc, items };
+        await ctx.reply(
+          `✅ Label "<b>${escHtml(text)}</b>" ပြင်ပြီးပါပြီ`,
+          { parse_mode: "HTML", reply_markup: adminServiceItemsKeyboard(updatedSvc) }
+        );
       }
-      ctx.session.adminStep = undefined;
-      await ctx.reply(`✅ ${bs("Item")} ဖျက်ပြီးပါပြီ`);
-    } else if (step === "delete_service") {
-      await deleteService(text);
-      ctx.session.adminStep = undefined;
-      await ctx.reply(`✅ ${bs("Service")} <code>${escHtml(text)}</code> ဖျက်ပြီးပါပြီ`, { parse_mode: "HTML" });
     }
   }
 
