@@ -50,6 +50,13 @@ export function ownerDoneKeyboard(orderId: string): InlineKeyboard {
   );
 }
 
+export function contactOwnerKeyboard(): InlineKeyboard {
+  return new InlineKeyboard()
+    .url(`📩 ${bs("Owner")} ကို ဆက်သွယ်ရန်`, "https://t.me/Mg_Piizza")
+    .row()
+    .add(btn(`🔙 ${bs("Back")}`, "back:main", "danger"));
+}
+
 export function mgServiceButton(): InlineKeyboard {
   return new InlineKeyboard().add(
     btn(`🍕 ${bs("MG Pizza Services")}`, "mg:service", "primary")

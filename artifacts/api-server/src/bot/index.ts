@@ -26,6 +26,7 @@ import {
   ownerDoneKeyboard,
   adminMenuKeyboard,
   mgServiceButton,
+  contactOwnerKeyboard,
 } from "./keyboards";
 import {
   generateOrderId,
@@ -91,11 +92,10 @@ export function createBot() {
   bot.command("start", async (ctx) => {
     ctx.session = {};
     const services = await getServices();
-    const name = escHtml(ctx.from?.first_name || "Customer");
     await ctx.reply(
-      `✨ <b>မင်္ဂလာပါ ${name}!</b>\n\n` +
-        `🛒 <b>${bs("MG Pizza Services")}</b> မှ ကြိုဆိုပါသည်\n\n` +
-        `📌 ဝယ်ယူလိုသော ${bs("Service")} တစ်ခုကို ရွေးချယ်ပါ ⬇️`,
+      `✨ <b>မင်္ဂလာပါ 🍕 ${bs("Mg Pizza Store")} မှ ကြိုဆိုပါသည်!</b>\n\n` +
+        `👤 ${bs("Owner")} သို့ဆက်သွယ်ရန်: <a href="https://t.me/Mg_Piizza">@Mg_Piizza</a>\n\n` +
+        `🛒 ${bs("Service")} များဝယ်ယူရန် တစ်ခုရွေးချယ်ပါ ⬇️`,
       { parse_mode: "HTML", reply_markup: mainMenuKeyboard(services) }
     );
   });
@@ -227,16 +227,11 @@ export function createBot() {
   bot.callbackQuery(/^contact:(.+):(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery();
     await ctx.editMessageText(
-      `📞 <b>အခြား ${bs("Services")}</b>\n\n` +
-        `ဤ ${bs("service")} ကို ဝယ်ယူရန်\n` +
-        `👉 ${bs("Owner")} ထံ တိုက်ရိုက်ဆက်သွယ်ပေးပါ\n\n` +
+      `📦 <b>အခြား ${bs("Services")} များ</b>\n\n` +
+        `ဝယ်ယူရန် <b>${bs("Owner")}</b> ထံ တိုက်ရိုက်ဆက်သွယ်ပေးပါ\n\n` +
+        `👤 <a href="https://t.me/Mg_Piizza">@Mg_Piizza</a> — ${bs("Owner")}\n\n` +
         `💬 ${bs("Service")} အသေးစိတ် မေးမြန်းနိုင်ပါသည်`,
-      {
-        parse_mode: "HTML",
-        reply_markup: new InlineKeyboard().add(
-          { text: `🔙 ${bs("Back")}`, callback_data: "back:main" } as any
-        ),
-      }
+      { parse_mode: "HTML", reply_markup: contactOwnerKeyboard() }
     );
   });
 

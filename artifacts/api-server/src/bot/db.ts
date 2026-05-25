@@ -105,12 +105,32 @@ async function ensureDefaults() {
         items: [
           { id: "others_tg_acc", label: "Telegram Account", price: 0, unit: "", requireContact: true },
           { id: "others_premium", label: "Telegram Premium", price: 0, unit: "", requireContact: true },
+          { id: "others_roblox", label: "🎮 Roblox", price: 0, unit: "", requireContact: true },
           { id: "others_custom", label: "တခြား Services", price: 0, unit: "", requireContact: true },
         ],
       },
     ];
     await db.push("/services", defaultServices);
   }
+
+  // Migration: add Roblox to existing "others" service if missing
+  try {
+    const services: Service[] = await db.getData("/services");
+    const othersIdx = services.findIndex((s) => s.id === "others");
+    if (othersIdx !== -1) {
+      const hasRoblox = services[othersIdx].items.some((i) => i.id === "others_roblox");
+      if (!hasRoblox) {
+        services[othersIdx].items.splice(-1, 0, {
+          id: "others_roblox",
+          label: "🎮 Roblox",
+          price: 0,
+          unit: "",
+          requireContact: true,
+        });
+        await db.push("/services", services);
+      }
+    }
+  } catch {}
 
   try {
     await db.getData("/orders");
