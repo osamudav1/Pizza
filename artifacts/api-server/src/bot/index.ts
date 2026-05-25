@@ -16,6 +16,7 @@ import {
 } from "./db";
 import {
   applyPremiumEmojis,
+  debugPremiumEmojis,
   setPremiumEmojiMapping,
   removePremiumEmojiMapping,
   getPremiumEmojiMap,
@@ -216,30 +217,45 @@ export function createBot() {
       return;
     }
 
-    // /premium debug  → send test message showing raw tg-emoji HTML
+    // /premium debug  → full diagnostic of emoji map + replacement test
     if (parts[0] === "debug") {
-      const map = await getPremiumEmojiMap();
-      if (map.size === 0) {
-        await ctx.reply(`⚠️ Mapping မရှိသေးပါ — <code>/premium 🧾 &lt;ID&gt;</code> ကိုသုံးပါ`, { parse_mode: "HTML" });
+      const info = await debugPremiumEmojis();
+
+      if (info.mapSize === 0) {
+        await ctx.reply(
+          `⚠️ <b>Mapping မရှိသေးပါ</b>\n\n` +
+          `Premium emoji map လုပ်ရန်:\n` +
+          `1. <code>/premium</code> ကိုနှိပ်ပါ\n` +
+          `2. Premium emoji ကို bot ဆီ send လုပ်ပါ (auto-detect)\n\n` +
+          `သို့မဟုတ် manual: <code>/premium [emoji] [ID]</code>`,
+          { parse_mode: "HTML" }
+        );
         return;
       }
-      // Build a test sentence using all mapped emojis
-      let sample = "";
-      for (const [emoji] of map.entries()) sample += `${emoji} `;
-      sample = sample.trim() + " Order Summary Test";
 
-      const replaced = await applyPremiumEmojis(sample);
+      let debugText = `🔍 <b>Premium Emoji Debug</b>\n\n`;
+      debugText += `📊 Mapped emojis: <b>${info.mapSize} ခု</b>\n\n`;
 
-      // Show raw HTML (escaped) so owner can confirm <tg-emoji> tags exist
-      await ctx.reply(
-        `🔍 <b>Debug: Raw HTML that gets sent to Telegram</b>\n\n` +
-          `<code>${escHtml(replaced)}</code>\n\n` +
-          `<b>Rendered version (below):</b>`,
-        { parse_mode: "HTML" }
-      );
-      // Send actual rendered version (transformer will also process this, but
-      // since it's already replaced above, no double-wrap happens)
-      await ctx.api.sendMessage(ctx.chat.id, replaced, { parse_mode: "HTML" });
+      for (const e of info.entries) {
+        debugText += `━━━━━━━━━━━━\n`;
+        debugText += `Emoji: ${e.emoji}\n`;
+        debugText += `Codepoints: <code>${escHtml(e.codepoints)}</code>\n`;
+        debugText += `ID: <code>${escHtml(e.id)}</code>\n`;
+      }
+
+      debugText += `━━━━━━━━━━━━\n\n`;
+      debugText += `✅ Replacement working: <b>${info.replaced ? "YES" : "NO ❌"}</b>\n\n`;
+      debugText += `📝 Raw HTML (after replacement):\n<code>${escHtml(info.testOutput)}</code>`;
+
+      await ctx.reply(debugText, { parse_mode: "HTML" });
+
+      // Send a rendered version so owner can see if it looks different
+      if (info.replaced) {
+        await ctx.reply(
+          `👇 <b>Rendered (Telegram ပြတဲ့ပုံ):</b>\n\n` + info.testOutput + `\n\n<i>Premium emoji ဆိုရင် animated/custom ဖြစ်ရမည်\nRegular emoji အတိုင်းဆိုရင် ID မမှန်ပါ</i>`,
+          { parse_mode: "HTML" }
+        );
+      }
       return;
     }
 
