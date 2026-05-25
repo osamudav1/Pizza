@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: nft-sell-os-bot
+    runtime: node
+    region: singapore
+    plan: free
+    rootDir: .
+    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server run build
+    startCommand: pnpm --filter @workspace/api-server run start
+    healthCheckPath: /ping
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
+      - key: BOT_TOKEN
+        sync: false
+      - key: OWNER_CHAT_ID
+        sync: false
+      - key: KPAY_NUMBER
+        sync: false
+      - key: GROUP_CHAT_ID
+        sync: false

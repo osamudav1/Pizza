@@ -31,4 +31,9 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
 
+// Root-level ping endpoint for uptime monitoring (UptimeRobot etc.)
+app.get("/ping", (_req, res) => {
+  res.json({ status: "ok", uptime: process.uptime() });
+});
+
 export default app;
