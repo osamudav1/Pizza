@@ -215,6 +215,14 @@ export function createBot() {
     );
   });
 
+  // ─── Callback: MG Service Button ───────────────────────────
+  bot.callbackQuery("mg:service", async (ctx) => {
+    await ctx.answerCallbackQuery({
+      text: `🍕 MG Pizza Services\n\nt.me/NFT_Sell_Os_bot`,
+      show_alert: true,
+    });
+  });
+
   // ─── Callback: Contact ─────────────────────────────────────
   bot.callbackQuery(/^contact:(.+):(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery();

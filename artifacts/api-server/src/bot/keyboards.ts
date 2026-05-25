@@ -51,9 +51,8 @@ export function ownerDoneKeyboard(orderId: string): InlineKeyboard {
 }
 
 export function mgServiceButton(): InlineKeyboard {
-  return new InlineKeyboard().url(
-    `🍕 ${bs("MG Pizza Services")}`,
-    "https://t.me/NFT_Sell_Os_bot"
+  return new InlineKeyboard().add(
+    btn(`🍕 ${bs("MG Pizza Services")}`, "mg:service", "primary")
   );
 }
 
