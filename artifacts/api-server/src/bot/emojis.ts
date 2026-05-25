@@ -43,21 +43,31 @@ export async function applyPremiumEmojis(text: string): Promise<string> {
     const tag = `<tg-emoji emoji-id="${id}">${emoji}</tg-emoji>`;
     const safe = emoji.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-    const pattern = emoji.endsWith("\uFE0F")
-      ? new RegExp(safe, "g")
-      : new RegExp(safe + "\uFE0F|" + safe, "g");
+    const emojiAlt = emoji.endsWith("\uFE0F")
+      ? safe
+      : safe + "\uFE0F|" + safe;
+
+    // Combined pattern: match existing <tg-emoji> blocks first (to skip them),
+    // then match bare emoji. This prevents double-wrapping.
+    const combined = new RegExp(
+      "(<tg-emoji[^>]*>[\\s\\S]*?<\\/tg-emoji>)|(" + emojiAlt + ")",
+      "g"
+    );
 
     const before = result;
-    result = result.replace(pattern, tag);
+    result = result.replace(combined, (match, tgBlock) => {
+      if (tgBlock !== undefined) return tgBlock;
+      return tag;
+    });
+
     if (result !== before) {
-      logger.info({ emoji, id, pattern: pattern.toString() }, "[premium-emoji] replaced in text");
+      logger.info({ emoji, id }, "[premium-emoji] replaced in text");
     }
   }
 
   return result;
 }
 
-// Test function: apply emoji map to a sample string and return debug info
 export async function debugPremiumEmojis(): Promise<{
   mapSize: number;
   entries: Array<{ emoji: string; id: string; codepoints: string }>;
@@ -69,7 +79,9 @@ export async function debugPremiumEmojis(): Promise<{
   const entries = Array.from(map.entries()).map(([emoji, id]) => ({
     emoji,
     id,
-    codepoints: [...emoji].map(c => "U+" + (c.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, "0")).join(" "),
+    codepoints: [...emoji]
+      .map(c => "U+" + (c.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, "0"))
+      .join(" "),
   }));
   const testInput = entries.map(e => e.emoji).join(" ") || "(no mappings)";
   const testOutput = await applyPremiumEmojis(testInput);
