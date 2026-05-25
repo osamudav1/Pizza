@@ -50,6 +50,13 @@ export function ownerDoneKeyboard(orderId: string): InlineKeyboard {
   );
 }
 
+export function mgServiceButton(): InlineKeyboard {
+  return new InlineKeyboard().url(
+    `🍕 ${bs("MG Pizza Services")}`,
+    "https://t.me/NFT_Sell_Os_bot"
+  );
+}
+
 export function adminMenuKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
     .add(btn(`📋  ${bs("Service List")} ကြည့်`, "admin:list", "primary")).row()

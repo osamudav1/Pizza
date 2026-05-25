@@ -25,6 +25,7 @@ import {
   ownerOrderKeyboard,
   ownerDoneKeyboard,
   adminMenuKeyboard,
+  mgServiceButton,
 } from "./keyboards";
 import {
   generateOrderId,
@@ -447,12 +448,13 @@ export function createBot() {
         await ctx.api.sendPhoto(order.userId, fileId, {
           caption: doneCaption + cap + mgFooter,
           parse_mode: "HTML",
+          reply_markup: mgServiceButton(),
         });
       } else if (ctx.message && "text" in ctx.message) {
         await ctx.api.sendMessage(
           order.userId,
           doneCaption + `\n📝 ${escHtml(ctx.message.text)}` + mgFooter,
-          { parse_mode: "HTML" }
+          { parse_mode: "HTML", reply_markup: mgServiceButton() }
         );
       }
 
@@ -494,7 +496,7 @@ export function createBot() {
           `📦 ${escHtml(order.serviceName)} — ${escHtml(order.itemLabel)}\n\n` +
           `⚡ ထည့်သွင်းပြီးပါပြီ ✨` +
           mgFooter,
-        { parse_mode: "HTML" }
+        { parse_mode: "HTML", reply_markup: mgServiceButton() }
       );
       await updateOrder(orderId, { status: "completed" });
       await ctx.editMessageReplyMarkup({ reply_markup: undefined });
@@ -507,7 +509,7 @@ export function createBot() {
           `📦 ${escHtml(order.serviceName)} — ${escHtml(order.itemLabel)}\n\n` +
           `⏳ ${bs("Order")} တင်ပြီးပါပြီ၊ ခနလေး စောင့်ပေးပါ 🙏` +
           mgFooter,
-        { parse_mode: "HTML" }
+        { parse_mode: "HTML", reply_markup: mgServiceButton() }
       );
       await updateOrder(orderId, { status: "processing" });
       await ctx.editMessageReplyMarkup({ reply_markup: ownerDoneKeyboard(orderId) });
