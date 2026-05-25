@@ -350,6 +350,25 @@
             "receiptCaption": "",
             "messageId": 97,
             "ownerMessageId": 98
+        },
+        {
+            "orderId": "𝗢𝗥𝗗-MPKTAC12-RQJM",
+            "userId": 8646459264,
+            "username": "Lunanoyume",
+            "firstName": "♡ ʟᴜɴᴀ",
+            "serviceId": "tg_boost",
+            "serviceName": "🚀 Telegram Boost",
+            "itemId": "tg_boost_1k",
+            "itemLabel": "1,000 Subscribers",
+            "itemPrice": 7000,
+            "status": "processing",
+            "createdAt": "2026-05-25T06:14:43.046Z",
+            "updatedAt": "2026-05-25T06:14:55.985Z",
+            "targetInfo": "Xx",
+            "receiptFileId": "AgACAgUAAxkBAANUahPgDwpo-stlho6qkKxUO3zIwYoAAhwQaxtbVqBUlFIBN1LKrlYBAAMCAAN3AAM7BA",
+            "receiptCaption": "",
+            "messageId": 113,
+            "ownerMessageId": 114
         }
     ],
     "sessions": {

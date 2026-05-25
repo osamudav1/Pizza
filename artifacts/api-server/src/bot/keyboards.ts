@@ -52,7 +52,7 @@ export function ownerDoneKeyboard(orderId: string): InlineKeyboard {
 
 export function contactOwnerKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
-    .url(`📩 ${bs("Owner")} ကို ဆက်သွယ်ရန်`, "https://t.me/Mg_Piizza")
+    .url(`📩 ${bs("Owner")} ကို ဆက်သွယ်ရန်`, "https://t.me/Mg_Piizzaa")
     .row()
     .add(btn(`🔙 ${bs("Back")}`, "back:main", "danger"));
 }
