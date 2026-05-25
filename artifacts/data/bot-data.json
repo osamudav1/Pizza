@@ -410,11 +410,26 @@
             "status": "pending_receipt",
             "createdAt": "2026-05-25T09:11:43.603Z",
             "updatedAt": "2026-05-25T09:11:43.603Z"
+        },
+        {
+            "orderId": "𝗢𝗥𝗗-MPL09WRL-IMI4",
+            "userId": 1735522859,
+            "username": "Osamu1123",
+            "firstName": "𝘖𝘴𝘢𝘮𝘶",
+            "serviceId": "tg_boost",
+            "serviceName": "🚀 Telegram Boost",
+            "itemId": "tg_boost_500",
+            "itemLabel": "500 Subscribers",
+            "itemPrice": 4000,
+            "status": "pending_receipt",
+            "createdAt": "2026-05-25T09:30:20.577Z",
+            "updatedAt": "2026-05-25T09:30:23.901Z",
+            "targetInfo": "ညထညထ"
         }
     ],
     "sessions": {
         "1735522859": {
-            "pendingOrderId": "𝗢𝗥𝗗-MPKZLYWJ-VEAI",
+            "pendingOrderId": "𝗢𝗥𝗗-MPL09WRL-IMI4",
             "step": "waiting_receipt"
         },
         "8646459264": {},

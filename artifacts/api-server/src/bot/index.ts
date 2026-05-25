@@ -165,9 +165,9 @@ export function createBot() {
       const id = parts[1];
       await setPremiumEmojiMapping(emoji, id);
       await ctx.reply(
-        `✅ <b>${bs("Premium Emoji")} သတ်မှတ်ပြီးပါပြီ!</b>\n\n` +
+        `✅ <b>Mapped!</b>\n\n` +
           `${emoji} → <code>${escHtml(id)}</code>\n\n` +
-          `ယခုမှစ၍ message များမှ <b>${emoji}</b> အားလုံး premium emoji အဖြစ် auto ပြောင်းသွားမည်`,
+          `ယခုမှစ၍ bot message များမှ <b>${emoji}</b> အားလုံး premium emoji အဖြစ် auto ပြောင်းသွားမည်`,
         { parse_mode: "HTML" }
       );
       return;

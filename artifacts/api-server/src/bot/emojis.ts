@@ -40,19 +40,16 @@ export async function applyPremiumEmojis(text: string): Promise<string> {
   let result = text;
   for (const [emoji, id] of map.entries()) {
     const tag = `<tg-emoji emoji-id="${id}">${emoji}</tg-emoji>`;
-    // Replace emoji+variation-selector (U+FE0F) FIRST — more specific match
-    if (!emoji.endsWith("\uFE0F")) {
-      result = result.replaceAll(emoji + "\uFE0F", tag);
-    }
-    // Then replace bare emoji (without variation selector)
-    // Use a pattern that won't re-replace what's already inside <tg-emoji> tags
-    result = result.replace(
-      new RegExp(
-        emoji.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?![^<]*<\\/tg-emoji>)",
-        "g"
-      ),
-      tag
-    );
+    const safe = emoji.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    // Single-pass regex: match emoji+VS16 first (more specific), then bare emoji.
+    // Single pass means the engine never re-scans the replacement string,
+    // so the emoji inside the new <tg-emoji> tag is never matched again.
+    const pattern = emoji.endsWith("\uFE0F")
+      ? new RegExp(safe, "g")
+      : new RegExp(safe + "\uFE0F|" + safe, "g");
+
+    result = result.replace(pattern, tag);
   }
 
   return result;
