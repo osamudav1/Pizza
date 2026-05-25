@@ -425,11 +425,41 @@
             "createdAt": "2026-05-25T09:30:20.577Z",
             "updatedAt": "2026-05-25T09:30:23.901Z",
             "targetInfo": "ညထညထ"
+        },
+        {
+            "orderId": "𝗢𝗥𝗗-MPL0M2NY-TPDZ",
+            "userId": 1735522859,
+            "username": "Osamu1123",
+            "firstName": "𝘖𝘴𝘢𝘮𝘶",
+            "serviceId": "tg_star",
+            "serviceName": "⭐ Telegram Stars",
+            "itemId": "tg_star_50",
+            "itemLabel": "50 Stars",
+            "itemPrice": 3000,
+            "status": "pending_receipt",
+            "createdAt": "2026-05-25T09:39:48.095Z",
+            "updatedAt": "2026-05-25T09:39:50.559Z",
+            "targetInfo": "ညထညထ"
+        },
+        {
+            "orderId": "𝗢𝗥𝗗-MPL0MIM3-DAO7",
+            "userId": 1735522859,
+            "username": "Osamu1123",
+            "firstName": "𝘖𝘴𝘢𝘮𝘶",
+            "serviceId": "tg_star",
+            "serviceName": "⭐ Telegram Stars",
+            "itemId": "tg_star_50",
+            "itemLabel": "50 Stars",
+            "itemPrice": 3000,
+            "status": "pending_receipt",
+            "createdAt": "2026-05-25T09:40:08.763Z",
+            "updatedAt": "2026-05-25T09:40:12.097Z",
+            "targetInfo": "ြဖြဖ"
         }
     ],
     "sessions": {
         "1735522859": {
-            "pendingOrderId": "𝗢𝗥𝗗-MPL09WRL-IMI4",
+            "pendingOrderId": "𝗢𝗥𝗗-MPL0MIM3-DAO7",
             "step": "waiting_receipt"
         },
         "8646459264": {},

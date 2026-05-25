@@ -2,6 +2,7 @@ import { Bot, Context, session, SessionFlavor, InlineKeyboard } from "grammy";
 import { JsonDbSessionStorage } from "./session-storage";
 import { logger } from "../lib/logger";
 import {
+  db,
   getServices,
   saveOrder,
   updateOrder,
@@ -140,48 +141,73 @@ export function createBot() {
     const arg = ctx.match?.trim() || "";
     const parts = arg.split(/\s+/);
 
-    if (parts[0] === "list") {
-      const map = await getPremiumEmojiMap();
-      if (map.size === 0) {
-        await ctx.reply(`📋 ${bs("Premium emoji")} မသတ်မှတ်ရသေးပါ`, { parse_mode: "HTML" });
-        return;
-      }
-      let text = `📋 <b>${bs("Premium Emoji Mappings")}</b>\n\n`;
-      for (const [emoji, id] of map.entries()) {
-        text += `${emoji} → <code>${escHtml(id)}</code>\n`;
-      }
-      await ctx.reply(text, { parse_mode: "HTML" });
-      return;
-    }
-
-    if (parts[0] === "clear" && parts[1]) {
+    // /premium remove <emoji>  → remove single mapping
+    if (parts[0] === "remove" && parts[1]) {
       await removePremiumEmojiMapping(parts[1]);
-      await ctx.reply(`✅ <code>${escHtml(parts[1])}</code> mapping ဖျက်ပြီးပါပြီ`, { parse_mode: "HTML" });
-      return;
-    }
-
-    if (parts.length >= 2) {
-      const emoji = parts[0];
-      const id = parts[1];
-      await setPremiumEmojiMapping(emoji, id);
       await ctx.reply(
-        `✅ <b>Mapped!</b>\n\n` +
-          `${emoji} → <code>${escHtml(id)}</code>\n\n` +
-          `ယခုမှစ၍ bot message များမှ <b>${emoji}</b> အားလုံး premium emoji အဖြစ် auto ပြောင်းသွားမည်`,
+        `✅ ${parts[1]} → default ပြန်ပြောင်းပြီးပါပြီ`,
         { parse_mode: "HTML" }
       );
       return;
     }
 
+    // /premium clear  → remove ALL mappings
+    if (parts[0] === "clear" && !parts[1]) {
+      try { await db.delete("/settings/emojiMap"); } catch {}
+      await ctx.reply(`✅ Mapping အကုန် ဖျက်ပြီးပါပြီ`, { parse_mode: "HTML" });
+      return;
+    }
+
+    // /premium list  → show current mappings
+    if (parts[0] === "list") {
+      const map = await getPremiumEmojiMap();
+      if (map.size === 0) {
+        await ctx.reply(`📋 Mapping မရှိသေးပါ`, { parse_mode: "HTML" });
+        return;
+      }
+      let text = `⭐ <b>Premium Emoji Manager</b>\n\n━━━━━━━━━━━━━━━━━━━━━━\n📌 <b>Current Mappings:</b>\n\n`;
+      for (const [emoji, id] of map.entries()) {
+        text += `${emoji} → <code>${escHtml(id)}</code>\n`;
+      }
+      text += `━━━━━━━━━━━━━━━━━━━━━━`;
+      await ctx.reply(text, { parse_mode: "HTML" });
+      return;
+    }
+
+    // /premium <emoji> <id>  → map emoji to premium ID
+    if (parts.length >= 2) {
+      const emoji = parts[0];
+      const id = parts[1];
+      await setPremiumEmojiMapping(emoji, id);
+      await ctx.reply(
+        `✅ <b>Mapped!</b>\n\n${emoji} → <code>${escHtml(id)}</code>`,
+        { parse_mode: "HTML" }
+      );
+      return;
+    }
+
+    // /premium  → show manager UI
+    const map = await getPremiumEmojiMap();
+    let currentText = `📌 <b>Current Mappings:</b>\n`;
+    if (map.size === 0) {
+      currentText += `<i>မရှိသေးပါ</i>\n`;
+    } else {
+      for (const [emoji, id] of map.entries()) {
+        currentText += `${emoji} → <code>${escHtml(id)}</code>\n`;
+      }
+    }
     await ctx.reply(
-      `⭐ <b>${bs("Premium Emoji")} Usage</b>\n\n` +
-        `<b>ထည့်ရန်:</b>\n<code>/premium ⭐ 5368324170671202286</code>\n\n` +
-        `<b>List ကြည့်ရန်:</b>\n<code>/premium list</code>\n\n` +
-        `<b>ဖျက်ရန်:</b>\n<code>/premium clear ⭐</code>\n\n` +
-        `💡 Premium emoji တစ်ခု ဒီ chat ထဲ send လုပ်ပါ — bot က auto-detect လုပ်မည်`,
+      `⭐ <b>Premium Emoji Manager</b>\n\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━\n` +
+        currentText +
+        `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `📌 <b>Commands:</b>\n` +
+        `<code>/premium 🧾 5368324170671202286</code>\n→ emoji တစ်ခုကို premium ID နဲ့ map လုပ်\n\n` +
+        `<code>/premium remove 🧾</code>\n→ emoji တစ်ခုကို default ပြန်ပြောင်း\n\n` +
+        `<code>/premium clear</code>\n→ mapping အကုန် ဖျက်\n\n` +
+        `<code>/premium list</code>\n→ current mappings ကြည့်`,
       { parse_mode: "HTML" }
     );
-    ctx.session.step = "waiting_premium_emoji";
   });
 
   // ─── Callback: Service Selection ──────────────────────────
