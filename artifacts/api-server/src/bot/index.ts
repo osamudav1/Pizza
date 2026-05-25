@@ -270,7 +270,8 @@ export function createBot() {
     ctx.session.step = "waiting_target";
 
     const needsTarget =
-      svc.id === "tg_boost" || svc.id === "tiktok" || svc.id === "tg_star";
+      svc.id === "tg_boost" || svc.id === "tiktok" || svc.id === "tg_star" ||
+      svc.id === "dia" || svc.id === "uc";
 
     if (needsTarget) {
       let promptText = "";
@@ -280,6 +281,15 @@ export function createBot() {
         promptText = `🎵 ${bs("TikTok Post/Profile Link")} ပေးပို့ပါ`;
       } else if (svc.id === "tg_star") {
         promptText = `⭐ ${bs("Telegram username")} ပေးပို့ပါ\n<code>(ဥပမာ: @myusername)</code>`;
+      } else if (svc.id === "dia") {
+        promptText =
+          `💎 <b>${bs("Mobile Legends")} Game ID နှင့် Server ID</b> ပေးပို့ပါ\n\n` +
+          `Format: <code>GameID (ServerID)</code>\n` +
+          `ဥပမာ: <code>123456789 (1234)</code>`;
+      } else if (svc.id === "uc") {
+        promptText =
+          `🎮 <b>${bs("PUBG Mobile")} Game ID (Character ID)</b> ပေးပို့ပါ\n\n` +
+          `ဥပမာ: <code>5123456789</code>`;
       }
 
       await ctx.editMessageText(

@@ -6,12 +6,6 @@
             "category": "main",
             "items": [
                 {
-                    "id": "tg_boost_1k",
-                    "label": "1,000 Subscribers",
-                    "price": 7000,
-                    "unit": "ks"
-                },
-                {
                     "id": "tg_boost_500",
                     "label": "500 Subscribers",
                     "price": 4000,
@@ -21,6 +15,12 @@
                     "id": "tg_boost_100",
                     "label": "100 Subscribers",
                     "price": 1000,
+                    "unit": "ks"
+                },
+                {
+                    "id": "tg_boost_1779700095263",
+                    "label": "1000 Subscribers",
+                    "price": 7000,
                     "unit": "ks"
                 }
             ]
@@ -159,6 +159,19 @@
                     "requireContact": true
                 }
             ]
+        },
+        {
+            "id": "game",
+            "items": [
+                {
+                    "id": "game_1779700170093",
+                    "label": "50 Diamond",
+                    "price": 700,
+                    "unit": "ks"
+                }
+            ],
+            "name": "MLbb game",
+            "category": "main"
         }
     ],
     "orders": [
@@ -369,11 +382,47 @@
             "receiptCaption": "",
             "messageId": 113,
             "ownerMessageId": 114
+        },
+        {
+            "orderId": "𝗢𝗥𝗗-MPKZJLY6-TS5M",
+            "userId": 1735522859,
+            "username": "Osamu1123",
+            "firstName": "𝘖𝘴𝘢𝘮𝘶",
+            "serviceId": "game",
+            "serviceName": "MLbb game",
+            "itemId": "game_1779700170093",
+            "itemLabel": "50 Diamond",
+            "itemPrice": 700,
+            "status": "pending_receipt",
+            "createdAt": "2026-05-25T09:09:53.502Z",
+            "updatedAt": "2026-05-25T09:09:53.502Z"
+        },
+        {
+            "orderId": "𝗢𝗥𝗗-MPKZLYWJ-VEAI",
+            "userId": 1735522859,
+            "username": "Osamu1123",
+            "firstName": "𝘖𝘴𝘢𝘮𝘶",
+            "serviceId": "game",
+            "serviceName": "MLbb game",
+            "itemId": "game_1779700170093",
+            "itemLabel": "50 Diamond",
+            "itemPrice": 700,
+            "status": "pending_receipt",
+            "createdAt": "2026-05-25T09:11:43.603Z",
+            "updatedAt": "2026-05-25T09:11:43.603Z"
         }
     ],
     "sessions": {
-        "1735522859": {},
+        "1735522859": {
+            "pendingOrderId": "𝗢𝗥𝗗-MPKZLYWJ-VEAI",
+            "step": "waiting_receipt"
+        },
         "8646459264": {},
         "-1003916887393": {}
+    },
+    "settings": {
+        "emojiMap": {
+            "🧾": "5444856076954520455"
+        }
     }
 }

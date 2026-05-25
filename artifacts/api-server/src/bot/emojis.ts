@@ -37,21 +37,23 @@ export async function applyPremiumEmojis(text: string): Promise<string> {
   const map = await getPremiumEmojiMap();
   if (map.size === 0) return text;
 
-  // Split on HTML tags so we never replace inside <tag ...> or <tg-emoji ...>
-  const parts = text.split(/(<[^>]+>)/);
-  const processed = parts.map((part) => {
-    if (part.startsWith("<")) return part;
-    let result = part;
-    for (const [emoji, id] of map.entries()) {
-      const tag = `<tg-emoji emoji-id="${id}">${emoji}</tg-emoji>`;
-      result = result.replaceAll(emoji, tag);
-      // Also match emoji + variation selector U+FE0F
-      if (!emoji.endsWith("\uFE0F")) {
-        result = result.replaceAll(emoji + "\uFE0F", tag);
-      }
+  let result = text;
+  for (const [emoji, id] of map.entries()) {
+    const tag = `<tg-emoji emoji-id="${id}">${emoji}</tg-emoji>`;
+    // Replace emoji+variation-selector (U+FE0F) FIRST — more specific match
+    if (!emoji.endsWith("\uFE0F")) {
+      result = result.replaceAll(emoji + "\uFE0F", tag);
     }
-    return result;
-  });
+    // Then replace bare emoji (without variation selector)
+    // Use a pattern that won't re-replace what's already inside <tg-emoji> tags
+    result = result.replace(
+      new RegExp(
+        emoji.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?![^<]*<\\/tg-emoji>)",
+        "g"
+      ),
+      tag
+    );
+  }
 
-  return processed.join("");
+  return result;
 }
