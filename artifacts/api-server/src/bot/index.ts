@@ -23,6 +23,7 @@ import {
 } from "./emojis";
 import {
   mainMenuKeyboard,
+  servicePageKeyboard,
   serviceItemsKeyboard,
   ownerOrderKeyboard,
   ownerDoneKeyboard,
@@ -34,6 +35,10 @@ import {
   adminItemManageKeyboard,
   adminCategoryKeyboard,
   adminAddMoreItemsKeyboard,
+  adminTargetTypeKeyboard,
+  adminNewSvcTargetKeyboard,
+  adminSkipPhotoKeyboard,
+  adminSkipCaptionKeyboard,
   mgServiceButton,
   contactOwnerKeyboard,
 } from "./keyboards";
@@ -54,6 +59,7 @@ interface SessionData {
   editServiceId?: string;
   editItemId?: string;
   editField?: string;
+  collectedPlayerId?: string;
 }
 
 type MyContext = Context & SessionFlavor<SessionData>;
@@ -307,6 +313,25 @@ export function createBot() {
     if (!svc) { await ctx.answerCallbackQuery(`${bs("Service")} မတွေ့ပါ`); return; }
     await ctx.answerCallbackQuery();
 
+    // New-style: service has a catalog photo/caption set by owner
+    if (svc.photo || svc.caption) {
+      try { await ctx.deleteMessage(); } catch {}
+      if (svc.photo) {
+        await ctx.replyWithPhoto(svc.photo, {
+          caption: svc.caption || escHtml(svc.name),
+          parse_mode: "HTML",
+          reply_markup: servicePageKeyboard(svc),
+        });
+      } else {
+        await ctx.reply(svc.caption!, {
+          parse_mode: "HTML",
+          reply_markup: servicePageKeyboard(svc),
+        });
+      }
+      return;
+    }
+
+    // Legacy: show items list (backward compat)
     let text = `📦 <b>${escHtml(svc.name)}</b>\n\n`;
     if (svc.category === "contact") {
       text += `ဤ ${bs("service")} များကို ဝယ်ယူရန် ${bs("owner")} ထံ တိုက်ရိုက်ဆက်သွယ်ပေးပါ\n\n`;
@@ -316,19 +341,40 @@ export function createBot() {
         text += `• ${escHtml(item.label)} — <b>${item.price.toLocaleString()} ${item.unit}</b>\n`;
       }
     }
-
     await ctx.editMessageText(text, {
       parse_mode: "HTML",
       reply_markup: serviceItemsKeyboard(svc),
     });
   });
 
+  // ─── Callback: Service Page Pagination ────────────────────
+  bot.callbackQuery(/^svcpg:(.+):(\d+)$/, async (ctx) => {
+    const serviceId = ctx.match[1];
+    const page = parseInt(ctx.match[2]);
+    const services = await getServices();
+    const svc = services.find((s) => s.id === serviceId);
+    if (!svc) { await ctx.answerCallbackQuery("မတွေ့ပါ"); return; }
+    await ctx.answerCallbackQuery();
+    let text = `📦 <b>${escHtml(svc.name)}</b>\n\n`;
+    for (const item of svc.items) {
+      text += `• ${escHtml(item.label)} — <b>${item.price.toLocaleString()} ${item.unit}</b>\n`;
+    }
+    try {
+      await ctx.editMessageText(text, { parse_mode: "HTML", reply_markup: serviceItemsKeyboard(svc, page) });
+    } catch {}
+  });
+
+  // ─── Callback: No-op (page indicator) ─────────────────────
+  bot.callbackQuery("noop", async (ctx) => { await ctx.answerCallbackQuery(); });
+
   // ─── Callback: Back to Main ────────────────────────────────
   bot.callbackQuery("back:main", async (ctx) => {
     await ctx.answerCallbackQuery();
     ctx.session = {};
     const services = await getServices();
-    await ctx.editMessageText(
+    // Delete current message (may be a photo) and send new text message
+    try { await ctx.deleteMessage(); } catch {}
+    await ctx.reply(
       `🛒 <b>${bs("Service Menu")}</b>\n\nဝယ်ယူလိုသော ${bs("service")} ကိုနှိပ်ပါ ⬇️`,
       { parse_mode: "HTML", reply_markup: mainMenuKeyboard(services) }
     );
@@ -432,6 +478,64 @@ export function createBot() {
     }
   });
 
+  // ─── Callback: Buy Service (new-style, photo+caption services) ─
+  bot.callbackQuery(/^buy_service:(.+)$/, async (ctx) => {
+    const serviceId = ctx.match[1];
+    const services = await getServices();
+    const svc = services.find((s) => s.id === serviceId);
+    if (!svc) { await ctx.answerCallbackQuery("Service မတွေ့ပါ"); return; }
+    await ctx.answerCallbackQuery();
+
+    const orderId = generateOrderId();
+    const order: Order = {
+      orderId,
+      userId: ctx.from!.id,
+      username: ctx.from?.username,
+      firstName: ctx.from?.first_name,
+      serviceId: svc.id,
+      serviceName: svc.name,
+      itemId: "service",
+      itemLabel: svc.name,
+      itemPrice: 0,
+      status: "pending_receipt",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    await saveOrder(order);
+    ctx.session.pendingOrderId = orderId;
+
+    const kpayInfo = `💳 <b>${bs("KPay / Wave")} နံပါတ်:</b> <code>${escHtml(KPAY_NUMBER!)}</code>`;
+    const targetType = svc.targetType || "general";
+
+    try { await ctx.deleteMessage(); } catch {}
+
+    if (targetType === "uc") {
+      ctx.session.step = "v2_waiting_player_id";
+      await ctx.reply(
+        `🎮 <b>${escHtml(svc.name)}</b>\n\n` +
+        kpayInfo + `\n\n` +
+        `📋 <b>${bs("Player ID")} (Character ID)</b> ရိုက်ထည့်ပါ:\n<i>ဥပမာ: 5123456789</i>`,
+        { parse_mode: "HTML" }
+      );
+    } else if (targetType === "dia") {
+      ctx.session.step = "v2_waiting_player_id";
+      await ctx.reply(
+        `💎 <b>${escHtml(svc.name)}</b>\n\n` +
+        kpayInfo + `\n\n` +
+        `📋 <b>${bs("Player ID")}</b> ရိုက်ထည့်ပါ:`,
+        { parse_mode: "HTML" }
+      );
+    } else {
+      ctx.session.step = "waiting_target";
+      await ctx.reply(
+        `📦 <b>${escHtml(svc.name)}</b>\n\n` +
+        kpayInfo + `\n\n` +
+        `📋 ${bs("Target Info")} (username, link, etc.) ရိုက်ထည့်ပါ:`,
+        { parse_mode: "HTML" }
+      );
+    }
+  });
+
   // ─── Message Handler ───────────────────────────────────────
   bot.on(["message:text", "message:photo"], async (ctx) => {
     const ownerChatId = Number(OWNER_CHAT_ID);
@@ -464,6 +568,56 @@ export function createBot() {
     // ── Admin text input flow ──
     if (isOwner(ctx, OWNER_CHAT_ID) && ctx.session.adminStep) {
       await handleAdminInput(ctx);
+      return;
+    }
+
+    // ── User flow: v2 — waiting Player ID (UC or Diamonds) ──
+    if (ctx.session.step === "v2_waiting_player_id" && ctx.session.pendingOrderId) {
+      const text = ctx.message && "text" in ctx.message ? ctx.message.text?.trim() : "";
+      if (!text) return;
+      const order = await getOrder(ctx.session.pendingOrderId);
+      if (!order) return;
+      const svc = (await getServices()).find((s) => s.id === order.serviceId);
+      const targetType = svc?.targetType || "uc";
+
+      if (targetType === "dia") {
+        // Save player ID, ask for server ID next
+        ctx.session.collectedPlayerId = text;
+        ctx.session.step = "v2_waiting_server_id";
+        await ctx.reply(
+          `✅ ${bs("Player ID")}: <code>${escHtml(text)}</code>\n\n` +
+          `📋 <b>${bs("Server ID")}</b> ရိုက်ထည့်ပါ:\n<i>ဥပမာ: 1234</i>`,
+          { parse_mode: "HTML" }
+        );
+      } else {
+        // UC — player ID is enough, then ask for receipt
+        await updateOrder(ctx.session.pendingOrderId, { targetInfo: `Player ID: ${text}` });
+        ctx.session.step = "waiting_receipt";
+        await ctx.reply(
+          `✅ ${bs("Player ID")}: <code>${escHtml(text)}</code>\n\n` +
+          `📸 <b>${bs("KPay/Wave")} ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`,
+          { parse_mode: "HTML" }
+        );
+      }
+      return;
+    }
+
+    // ── User flow: v2 — waiting Server ID (Diamonds) ──
+    if (ctx.session.step === "v2_waiting_server_id" && ctx.session.pendingOrderId) {
+      const text = ctx.message && "text" in ctx.message ? ctx.message.text?.trim() : "";
+      if (!text) return;
+      const playerId = ctx.session.collectedPlayerId || "?";
+      await updateOrder(ctx.session.pendingOrderId, {
+        targetInfo: `Player ID: ${playerId}\nServer ID: ${text}`,
+      });
+      ctx.session.step = "waiting_receipt";
+      ctx.session.collectedPlayerId = undefined;
+      await ctx.reply(
+        `✅ ${bs("Player ID")}: <code>${escHtml(playerId)}</code>\n` +
+        `✅ ${bs("Server ID")}: <code>${escHtml(text)}</code>\n\n` +
+        `📸 <b>${bs("KPay/Wave")} ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`,
+        { parse_mode: "HTML" }
+      );
       return;
     }
 
@@ -1025,7 +1179,32 @@ export function createBot() {
     }
   });
 
-  // ─── Admin: Category Selection Button ─────────────────────
+  // ─── Admin: New Service — Target Type Selection ────────────
+  bot.callbackQuery(/^admin:addcat:(uc|dia|general|contact)$/, async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    const targetType = ctx.match[1];
+    if (!ctx.session.newService) { await ctx.answerCallbackQuery("❌ Session ပျောက်သွားပါပြီ"); return; }
+    await ctx.answerCallbackQuery();
+    const category = targetType === "contact" ? "contact" : "main";
+    ctx.session.newService.category = category;
+    ctx.session.newService.targetType = targetType;
+    ctx.session.adminStep = "add_svc_photo";
+    try {
+      await ctx.editMessageText(
+        `✅ Target Type: <b>${escHtml(targetType.toUpperCase())}</b>\n\n` +
+        `📸 Service ဓာတ်ပုံ (Catalog Image) ပေးပို့ပါ\n<i>သို့မဟုတ် ကျော်နိုင်ပါသည်</i>`,
+        { parse_mode: "HTML", reply_markup: adminSkipPhotoKeyboard() }
+      );
+    } catch {
+      await ctx.reply(
+        `✅ Target Type: <b>${escHtml(targetType.toUpperCase())}</b>\n\n` +
+        `📸 Service ဓာတ်ပုံ (Catalog Image) ပေးပို့ပါ\n<i>သို့မဟုတ် ကျော်နိုင်ပါသည်</i>`,
+        { parse_mode: "HTML", reply_markup: adminSkipPhotoKeyboard() }
+      );
+    }
+  });
+
+  // ─── Admin: Category Selection Button (legacy compat) ──────
   bot.callbackQuery(/^admin:cat:(main|contact)$/, async (ctx) => {
     if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
     const category = ctx.match[1];
@@ -1046,6 +1225,117 @@ export function createBot() {
     }
   });
 
+  // ─── Admin: Set Service Media (Photo + Caption) ────────────
+  bot.callbackQuery(/^admin:svc_media:(.+)$/, async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    const svcId = ctx.match[1];
+    await ctx.answerCallbackQuery();
+    ctx.session.adminStep = "svc_photo";
+    ctx.session.editServiceId = svcId;
+    try {
+      await ctx.editMessageText(
+        `📸 <b>Catalog Photo</b> ပေးပို့ပါ\n<i>သို့မဟုတ် ကျော်နိုင်ပါသည်</i>`,
+        { parse_mode: "HTML", reply_markup: adminSkipPhotoKeyboard() }
+      );
+    } catch {
+      await ctx.reply(
+        `📸 <b>Catalog Photo</b> ပေးပို့ပါ\n<i>သို့မဟုတ် ကျော်နိုင်ပါသည်</i>`,
+        { parse_mode: "HTML", reply_markup: adminSkipPhotoKeyboard() }
+      );
+    }
+  });
+
+  // ─── Admin: Set Target Type (existing service) ─────────────
+  bot.callbackQuery(/^admin:svc_target:(.+)$/, async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    const svcId = ctx.match[1];
+    await ctx.answerCallbackQuery();
+    try {
+      await ctx.editMessageText(
+        `🎯 <b>Target Type ရွေးချယ်ပါ</b>`,
+        { parse_mode: "HTML", reply_markup: adminTargetTypeKeyboard(svcId) }
+      );
+    } catch {
+      await ctx.reply(`🎯 <b>Target Type ရွေးချယ်ပါ</b>`, { parse_mode: "HTML", reply_markup: adminTargetTypeKeyboard(svcId) });
+    }
+  });
+
+  // ─── Admin: Confirm Target Type ────────────────────────────
+  bot.callbackQuery(/^admin:target:([^:]+):(uc|dia|general|contact)$/, async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    const svcId = ctx.match[1];
+    const targetType = ctx.match[2];
+    const category = targetType === "contact" ? "contact" : "main";
+    await updateService(svcId, { targetType, category });
+    await ctx.answerCallbackQuery(`✅ Target Type: ${targetType.toUpperCase()} သတ်မှတ်ပြီးပါပြီ!`);
+    const services = await getServices();
+    const svc = services.find((s) => s.id === svcId);
+    if (svc) {
+      try {
+        await ctx.editMessageText(
+          `✅ <b>Target Type: ${escHtml(targetType.toUpperCase())}</b> ပြင်ပြီးပါပြီ\n\n⚙️ <b>${escHtml(svc.name)}</b>`,
+          { parse_mode: "HTML", reply_markup: adminServiceManageKeyboard(svc) }
+        );
+      } catch {
+        await ctx.reply(
+          `✅ Target Type: <b>${escHtml(targetType.toUpperCase())}</b> ပြင်ပြီးပါပြီ`,
+          { parse_mode: "HTML", reply_markup: adminServiceManageKeyboard(svc) }
+        );
+      }
+    }
+  });
+
+  // ─── Admin: Skip Photo ─────────────────────────────────────
+  bot.callbackQuery("admin:skip_photo", async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    await ctx.answerCallbackQuery();
+    const isNewSvc = ctx.session.adminStep === "add_svc_photo";
+    ctx.session.adminStep = isNewSvc ? "add_svc_caption" : "svc_caption";
+    try {
+      await ctx.editMessageText(
+        `📝 <b>Service Caption / ဖော်ပြချက်</b> ရိုက်ပါ (HTML ထည့်လို့ရ)\n<i>သို့မဟုတ် ကျော်နိုင်ပါသည်</i>`,
+        { parse_mode: "HTML", reply_markup: adminSkipCaptionKeyboard() }
+      );
+    } catch {
+      await ctx.reply(
+        `📝 <b>Service Caption / ဖော်ပြချက်</b> ရိုက်ပါ (HTML ထည့်လို့ရ)\n<i>သို့မဟုတ် ကျော်နိုင်ပါသည်</i>`,
+        { parse_mode: "HTML", reply_markup: adminSkipCaptionKeyboard() }
+      );
+    }
+  });
+
+  // ─── Admin: Skip Caption ───────────────────────────────────
+  bot.callbackQuery("admin:skip_caption", async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    await ctx.answerCallbackQuery();
+    const isNewSvc = ctx.session.adminStep === "add_svc_caption";
+    if (isNewSvc) {
+      // Save new service without caption
+      const svc = ctx.session.newService as Service;
+      if (!svc?.id || !svc?.name) { return; }
+      if (!svc.items) svc.items = [];
+      await addService(svc);
+      ctx.session.adminStep = undefined;
+      ctx.session.newService = undefined;
+      await ctx.answerCallbackQuery(`✅ Service ထည့်ပြီးပါပြီ!`);
+      await ctx.reply(
+        `✅ <b>${escHtml(svc.name)}</b> Service ထည့်ပြီးပါပြီ!`,
+        { parse_mode: "HTML", reply_markup: adminMenuKeyboard() }
+      );
+    } else {
+      // Edit existing service — skip caption update
+      const svcId = ctx.session.editServiceId!;
+      ctx.session.adminStep = undefined;
+      ctx.session.editServiceId = undefined;
+      const services = await getServices();
+      const svc = services.find((s) => s.id === svcId);
+      await ctx.reply(
+        `✅ Caption ကျော်ပြီးပါပြီ`,
+        { parse_mode: "HTML", reply_markup: svc ? adminServiceManageKeyboard(svc) : adminMenuKeyboard() }
+      );
+    }
+  });
+
   // ─── Admin: Save New Service ───────────────────────────────
   bot.callbackQuery("admin:add_done", async (ctx) => {
     if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
@@ -1054,24 +1344,20 @@ export function createBot() {
       await ctx.answerCallbackQuery("❌ Service data မရှိပါ");
       return;
     }
-    if (!svc.items || svc.items.length === 0) {
-      await ctx.answerCallbackQuery("❌ Item အနည်းဆုံး ၁ ခုထည့်ပါ");
-      return;
-    }
+    if (!svc.items) svc.items = [];
     await addService(svc);
     ctx.session.adminStep = undefined;
     ctx.session.newService = undefined;
     await ctx.answerCallbackQuery(`✅ Service ထည့်ပြီးပါပြီ!`);
+    const summary = svc.photo ? `📸 Photo ပါ` : svc.caption ? `📝 Caption ပါ` : `Items: ${svc.items.length} ခု`;
     try {
       await ctx.editMessageText(
-        `✅ <b>${escHtml(svc.name)}</b> Service ထည့်ပြီးပါပြီ!\n` +
-          `Items: ${svc.items.length} ခု`,
+        `✅ <b>${escHtml(svc.name)}</b> Service ထည့်ပြီးပါပြီ!\n${summary}`,
         { parse_mode: "HTML", reply_markup: adminMenuKeyboard() }
       );
     } catch {
       await ctx.reply(
-        `✅ <b>${escHtml(svc.name)}</b> Service ထည့်ပြီးပါပြီ!\n` +
-          `Items: ${svc.items.length} ခု`,
+        `✅ <b>${escHtml(svc.name)}</b> Service ထည့်ပြီးပါပြီ!\n${summary}`,
         { parse_mode: "HTML", reply_markup: adminMenuKeyboard() }
       );
     }
@@ -1081,9 +1367,32 @@ export function createBot() {
   // ─── Admin Text Input Handler ──────────────────────────────
   // ═══════════════════════════════════════════════════════════
   async function handleAdminInput(ctx: MyContext) {
+    const step = ctx.session.adminStep;
+
+    // ── Photo upload steps: handle photo messages ──
+    const isPhotoStep = step === "add_svc_photo" || step === "svc_photo";
+    if (isPhotoStep && ctx.message && "photo" in ctx.message && ctx.message.photo) {
+      const photos = ctx.message.photo;
+      const fileId = photos[photos.length - 1].file_id;
+      const isNewSvc = step === "add_svc_photo";
+
+      if (isNewSvc) {
+        ctx.session.newService!.photo = fileId;
+        ctx.session.adminStep = "add_svc_caption";
+      } else {
+        await updateService(ctx.session.editServiceId!, { photo: fileId });
+        ctx.session.adminStep = "svc_caption";
+      }
+      await ctx.reply(
+        `✅ Photo လက်ခံပြီးပါပြီ!\n\n` +
+        `📝 <b>Caption / ဖော်ပြချက်</b> ရိုက်ပါ (HTML OK)\n<i>သို့မဟုတ် ကျော်နိုင်ပါသည်</i>`,
+        { parse_mode: "HTML", reply_markup: adminSkipCaptionKeyboard() }
+      );
+      return;
+    }
+
     const text = ctx.message && "text" in ctx.message ? ctx.message.text?.trim() : "";
     if (!text) return;
-    const step = ctx.session.adminStep;
 
     // ── Add service: step 1 — ID ──
     if (step === "add_id") {
@@ -1096,13 +1405,53 @@ export function createBot() {
         { parse_mode: "HTML" }
       );
 
-    // ── Add service: step 2 — Name ──
+    // ── Add service: step 2 — Name → show target type keyboard ──
     } else if (step === "add_name") {
       ctx.session.newService!.name = text;
       ctx.session.adminStep = "add_category";
       await ctx.reply(
-        `✅ Name: <b>${escHtml(text)}</b>\n\n<b>Category</b> ရွေးချယ်ပါ:`,
-        { parse_mode: "HTML", reply_markup: adminCategoryKeyboard() }
+        `✅ Name: <b>${escHtml(text)}</b>\n\n🎯 <b>Target Type</b> ရွေးချယ်ပါ:`,
+        { parse_mode: "HTML", reply_markup: adminNewSvcTargetKeyboard() }
+      );
+
+    // ── Add service: photo step — text not expected ──
+    } else if (step === "add_svc_photo") {
+      await ctx.reply(
+        `📸 ဓာတ်ပုံ (image) ပေးပို့ပါ သို့မဟုတ် ကျော်ပါ`,
+        { parse_mode: "HTML", reply_markup: adminSkipPhotoKeyboard() }
+      );
+
+    // ── Add service: caption step ──
+    } else if (step === "add_svc_caption") {
+      ctx.session.newService!.caption = text;
+      const svc = ctx.session.newService as Service;
+      if (!svc.items) svc.items = [];
+      await addService(svc);
+      ctx.session.adminStep = undefined;
+      ctx.session.newService = undefined;
+      await ctx.reply(
+        `✅ <b>${escHtml(svc.name)}</b> Service ထည့်ပြီးပါပြီ!\n📝 Caption ပါ`,
+        { parse_mode: "HTML", reply_markup: adminMenuKeyboard() }
+      );
+
+    // ── Edit service: photo step — text not expected ──
+    } else if (step === "svc_photo") {
+      await ctx.reply(
+        `📸 ဓာတ်ပုံ (image) ပေးပို့ပါ သို့မဟုတ် ကျော်ပါ`,
+        { parse_mode: "HTML", reply_markup: adminSkipPhotoKeyboard() }
+      );
+
+    // ── Edit service: caption step ──
+    } else if (step === "svc_caption") {
+      const svcId = ctx.session.editServiceId!;
+      await updateService(svcId, { caption: text });
+      ctx.session.adminStep = undefined;
+      ctx.session.editServiceId = undefined;
+      const services = await getServices();
+      const svc = services.find((s) => s.id === svcId);
+      await ctx.reply(
+        `✅ Caption ပြင်ပြီးပါပြီ`,
+        { parse_mode: "HTML", reply_markup: svc ? adminServiceManageKeyboard(svc) : adminMenuKeyboard() }
       );
 
     // ── Add service: items (first or more) ──

@@ -11,6 +11,9 @@ export interface Service {
   id: string;
   name: string;
   category: string;
+  photo?: string;       // Telegram file_id for catalog image
+  caption?: string;     // Description text (supports premium emoji)
+  targetType?: string;  // "uc" | "dia" | "general" | "contact"
   items: ServiceItem[];
 }
 

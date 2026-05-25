@@ -15,26 +15,72 @@ function btn(text: string, callbackData: string, style?: ButtonStyle): any {
 export function mainMenuKeyboard(services: Service[]): InlineKeyboard {
   const kb = new InlineKeyboard();
   for (const svc of services) {
-    kb.add(btn(bs(svc.name), `svc:${svc.id}`, "primary")).row();
+    kb.add(btn(svc.name, `svc:${svc.id}`, "primary")).row();
   }
   return kb;
 }
 
-export function serviceItemsKeyboard(service: Service): InlineKeyboard {
+// New-style service page: photo+caption → Buy or Contact + Back
+export function servicePageKeyboard(svc: Service): InlineKeyboard {
+  const isContact = svc.targetType === "contact" || svc.category === "contact";
   const kb = new InlineKeyboard();
-  for (const item of service.items) {
-    if (item.requireContact) {
-      kb.add(btn(`📞 ${bs(item.label)}`, `contact:${service.id}:${item.id}`, "primary")).row();
-    } else {
-      kb.add(
-        btn(
-          `🛒 ${bs(item.label)}  ·  ${item.price.toLocaleString()} ${bs("ks")}`,
-          `buy:${service.id}:${item.id}`,
-          "success"
-        )
-      ).row();
+  if (isContact) {
+    kb.url(`📩 ${bs("Owner")} ဆက်သွယ်ရန်`, "https://t.me/Mg_Piizzaa").row();
+  } else {
+    kb.add(btn(`🛒 ဝယ်ယူရန်`, `buy_service:${svc.id}`, "success")).row();
+  }
+  kb.add(btn(`🔙 ${bs("Back")}`, "back:main", "danger")).row();
+  return kb;
+}
+
+// Legacy: items list keyboard (backward compat for services without photo/caption)
+export function serviceItemsKeyboard(service: Service, page = 0): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  const ITEMS_PER_PAGE = 10;
+  const items = service.items;
+  const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
+  const pageItems = items.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE);
+
+  const twoCol = service.id.startsWith("uc") || service.id.startsWith("dia");
+
+  if (twoCol) {
+    for (let i = 0; i < pageItems.length; i += 2) {
+      const pair = pageItems.slice(i, i + 2);
+      if (pair.length === 2) {
+        kb.add(
+          btn(`${bs(pair[0].label)} · ${pair[0].price.toLocaleString()}ks`, `buy:${service.id}:${pair[0].id}`, "success"),
+          btn(`${bs(pair[1].label)} · ${pair[1].price.toLocaleString()}ks`, `buy:${service.id}:${pair[1].id}`, "success")
+        ).row();
+      } else {
+        kb.add(
+          btn(`🛒 ${bs(pair[0].label)}  ·  ${pair[0].price.toLocaleString()} ${bs("ks")}`, `buy:${service.id}:${pair[0].id}`, "success")
+        ).row();
+      }
+    }
+  } else {
+    for (const item of pageItems) {
+      if (item.requireContact) {
+        kb.add(btn(`📞 ${bs(item.label)}`, `contact:${service.id}:${item.id}`, "primary")).row();
+      } else {
+        kb.add(
+          btn(
+            `🛒 ${bs(item.label)}  ·  ${item.price.toLocaleString()} ${bs("ks")}`,
+            `buy:${service.id}:${item.id}`,
+            "success"
+          )
+        ).row();
+      }
     }
   }
+
+  if (totalPages > 1) {
+    const nav: any[] = [];
+    if (page > 0) nav.push(btn(`◀ ${page}`, `svcpg:${service.id}:${page - 1}`));
+    nav.push(btn(`${page + 1}/${totalPages}`, "noop"));
+    if (page < totalPages - 1) nav.push(btn(`${page + 2} ▶`, `svcpg:${service.id}:${page + 1}`));
+    kb.add(...nav).row();
+  }
+
   kb.add(btn(`🔙 ${bs("Back")}`, "back:main", "danger")).row();
   return kb;
 }
@@ -77,7 +123,8 @@ export function adminMenuKeyboard(): InlineKeyboard {
 export function adminServicesKeyboard(services: Service[]): InlineKeyboard {
   const kb = new InlineKeyboard();
   for (const svc of services) {
-    kb.add(btn(svc.name, `admin:svc:${svc.id}`)).row();
+    const icon = svc.photo ? "📸" : svc.caption ? "📝" : "📦";
+    kb.add(btn(`${icon} ${svc.name}`, `admin:svc:${svc.id}`)).row();
   }
   kb.add(btn(`🔙 Admin Menu`, "admin:back")).row();
   return kb;
@@ -86,9 +133,43 @@ export function adminServicesKeyboard(services: Service[]): InlineKeyboard {
 export function adminServiceManageKeyboard(svc: Service): InlineKeyboard {
   return new InlineKeyboard()
     .add(btn(`✏️ Service Name ပြင်`, `admin:name:${svc.id}`)).row()
-    .add(btn(`📦 Items စီမံ (ထည့် / ပြင် / ဖျက်)`, `admin:items:${svc.id}`, "primary")).row()
+    .add(btn(`📸 Photo + Caption ထည့်/ပြင်`, `admin:svc_media:${svc.id}`, "primary")).row()
+    .add(btn(`🎯 Target Type ပြင်`, `admin:svc_target:${svc.id}`)).row()
+    .add(btn(`📦 Items စီမံ (ထည့် / ပြင် / ဖျက်)`, `admin:items:${svc.id}`)).row()
     .add(btn(`🗑️ Service ဖျက်`, `admin:del:${svc.id}`, "danger")).row()
     .add(btn(`🔙 Services`, "admin:svcs")).row();
+}
+
+// Target type keyboard for editing existing service
+export function adminTargetTypeKeyboard(svcId: string): InlineKeyboard {
+  return new InlineKeyboard()
+    .add(btn(`🎮 UC (PUBG)`, `admin:target:${svcId}:uc`, "success")).row()
+    .add(btn(`💎 Diamonds / ML`, `admin:target:${svcId}:dia`, "success")).row()
+    .add(btn(`📋 General`, `admin:target:${svcId}:general`)).row()
+    .add(btn(`📞 Contact Owner`, `admin:target:${svcId}:contact`)).row()
+    .add(btn(`🔙 Back`, `admin:svc:${svcId}`)).row();
+}
+
+// Target type keyboard for new service add flow
+export function adminNewSvcTargetKeyboard(): InlineKeyboard {
+  return new InlineKeyboard()
+    .add(btn(`🎮 UC (PUBG)`, `admin:addcat:uc`, "success")).row()
+    .add(btn(`💎 Diamonds / ML (Dia)`, `admin:addcat:dia`, "success")).row()
+    .add(btn(`📋 General / Other`, `admin:addcat:general`)).row()
+    .add(btn(`📞 Contact (ဆက်သွယ်)`, `admin:addcat:contact`)).row()
+    .add(btn(`❌ ဖျက်မည်`, "admin:cancel")).row();
+}
+
+export function adminSkipPhotoKeyboard(): InlineKeyboard {
+  return new InlineKeyboard()
+    .add(btn(`⏭ Photo မထည့်ဘဲ ကျော်ပါ`, "admin:skip_photo")).row()
+    .add(btn(`❌ ဖျက်မည်`, "admin:cancel")).row();
+}
+
+export function adminSkipCaptionKeyboard(): InlineKeyboard {
+  return new InlineKeyboard()
+    .add(btn(`⏭ Caption မထည့်ဘဲ ကျော်ပါ`, "admin:skip_caption")).row()
+    .add(btn(`❌ ဖျက်မည်`, "admin:cancel")).row();
 }
 
 export function adminConfirmDeleteKeyboard(svcId: string): InlineKeyboard {
