@@ -34,3 +34,4 @@ externalPort = 3000
 
 [userenv.shared]
 GROUP_CHAT_ID = "-1003916887393"
+OWNER_CHAT_ID = "1735522859"
