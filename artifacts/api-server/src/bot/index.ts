@@ -613,8 +613,15 @@ export function createBot() {
         { parse_mode: "HTML", reply_markup: mgServiceButton() }
       );
       await updateOrder(orderId, { status: "completed" });
-      await ctx.editMessageReplyMarkup({ reply_markup: undefined });
-      await ctx.reply(`✅ ${bs("Order")} <code>${escHtml(orderId)}</code> — ငွေလက်ခံ + ${bs("Done")} ပြီးပါပြီ`, { parse_mode: "HTML" });
+      try {
+        await ctx.editMessageText(
+          `✅ <b>${bs("Order")} ပြီးပါပြီ</b>\n\n` +
+            `🆔 <code>${escHtml(orderId)}</code>\n` +
+            `📦 ${escHtml(order.serviceName)} — ${escHtml(order.itemLabel)}\n\n` +
+            `⚡ ငွေလက်ခံ + Done ပြီးပါပြီ`,
+          { parse_mode: "HTML" }
+        );
+      } catch { /* message may not be editable */ }
     } else {
       await ctx.api.sendMessage(
         order.userId,
@@ -651,8 +658,15 @@ export function createBot() {
     );
 
     await updateOrder(orderId, { status: "rejected" });
-    await ctx.editMessageReplyMarkup({ reply_markup: undefined });
-    await ctx.reply(`❌ ${bs("Order")} <code>${escHtml(orderId)}</code> — ငွေလွှဲ မတည့်ပါ`, { parse_mode: "HTML" });
+    try {
+      await ctx.editMessageText(
+        `❌ <b>${bs("Order")} ငြင်းပယ်ပြီးပါပြီ</b>\n\n` +
+          `🆔 <code>${escHtml(orderId)}</code>\n` +
+          `📦 ${escHtml(order.serviceName)} — ${escHtml(order.itemLabel)}\n\n` +
+          `❌ ငွေလွှဲ မတည့်ပါ`,
+        { parse_mode: "HTML" }
+      );
+    } catch { /* message may not be editable */ }
   });
 
   // ─── Owner Done Slip ───────────────────────────────────────
@@ -662,12 +676,21 @@ export function createBot() {
     await ctx.answerCallbackQuery();
     ctx.session.step = "waiting_done_slip";
     ctx.session.pendingOrderId = orderId;
-    await ctx.reply(
-      `📤 <b>${bs("Done Slip")} ပို့မည်</b>\n\n` +
-        `${bs("Order ID")}: <code>${escHtml(orderId)}</code>\n\n` +
-        `📸 ${bs("Done slip")} ဓာတ်ပုံ (သို့မဟုတ်) ${bs("Done")} အကြောင်းကြားချက် စာပို့ပေးပါ`,
-      { parse_mode: "HTML" }
-    );
+    try {
+      await ctx.editMessageText(
+        `📤 <b>${bs("Done Slip")} ပို့မည်</b>\n\n` +
+          `${bs("Order ID")}: <code>${escHtml(orderId)}</code>\n\n` +
+          `📸 ${bs("Done slip")} ဓာတ်ပုံ (သို့မဟုတ်) ${bs("Done")} အကြောင်းကြားချက် စာပို့ပေးပါ`,
+        { parse_mode: "HTML" }
+      );
+    } catch {
+      await ctx.reply(
+        `📤 <b>${bs("Done Slip")} ပို့မည်</b>\n\n` +
+          `${bs("Order ID")}: <code>${escHtml(orderId)}</code>\n\n` +
+          `📸 ${bs("Done slip")} ဓာတ်ပုံ (သို့မဟုတ်) ${bs("Done")} အကြောင်းကြားချက် စာပို့ပေးပါ`,
+        { parse_mode: "HTML" }
+      );
+    }
   });
 
   // ═══════════════════════════════════════════════════════════
@@ -703,10 +726,17 @@ export function createBot() {
     ctx.session.newService = undefined;
     ctx.session.editServiceId = undefined;
     ctx.session.editItemId = undefined;
-    await ctx.reply(
-      `⚙️ <b>${bs("Admin Panel")}</b>\n\n${bs("Service")} များ စီမံခန့်ခွဲရန်:`,
-      { parse_mode: "HTML", reply_markup: adminMenuKeyboard() }
-    );
+    try {
+      await ctx.editMessageText(
+        `⚙️ <b>${bs("Admin Panel")}</b>\n\n${bs("Service")} များ စီမံခန့်ခွဲရန်:`,
+        { parse_mode: "HTML", reply_markup: adminMenuKeyboard() }
+      );
+    } catch {
+      await ctx.reply(
+        `⚙️ <b>${bs("Admin Panel")}</b>\n\n${bs("Service")} များ စီမံခန့်ခွဲရန်:`,
+        { parse_mode: "HTML", reply_markup: adminMenuKeyboard() }
+      );
+    }
   });
 
   // ─── Admin: Service List ───────────────────────────────────
@@ -726,7 +756,11 @@ export function createBot() {
       }
       text += `\n`;
     }
-    await ctx.reply(text, { parse_mode: "HTML", reply_markup: adminMenuKeyboard() });
+    try {
+      await ctx.editMessageText(text, { parse_mode: "HTML", reply_markup: adminMenuKeyboard() });
+    } catch {
+      await ctx.reply(text, { parse_mode: "HTML", reply_markup: adminMenuKeyboard() });
+    }
   });
 
   // ─── Admin: Start Add Service ──────────────────────────────
@@ -735,12 +769,21 @@ export function createBot() {
     await ctx.answerCallbackQuery();
     ctx.session.adminStep = "add_id";
     ctx.session.newService = { items: [] };
-    await ctx.reply(
-      `➕ <b>${bs("Service")} အသစ်ထည့်</b>\n\n` +
-        `${bs("Service ID")} ရိုက်ပါ (emoji မပါဘဲ၊ underscore သုံးပါ)\n` +
-        `ဥပမာ: <code>facebook_like</code>`,
-      { parse_mode: "HTML" }
-    );
+    try {
+      await ctx.editMessageText(
+        `➕ <b>${bs("Service")} အသစ်ထည့်</b>\n\n` +
+          `${bs("Service ID")} ရိုက်ပါ (emoji မပါဘဲ၊ underscore သုံးပါ)\n` +
+          `ဥပမာ: <code>facebook_like</code>`,
+        { parse_mode: "HTML" }
+      );
+    } catch {
+      await ctx.reply(
+        `➕ <b>${bs("Service")} အသစ်ထည့်</b>\n\n` +
+          `${bs("Service ID")} ရိုက်ပါ (emoji မပါဘဲ၊ underscore သုံးပါ)\n` +
+          `ဥပမာ: <code>facebook_like</code>`,
+        { parse_mode: "HTML" }
+      );
+    }
   });
 
   // ─── Admin: Services List (for selection) ─────────────────
@@ -789,10 +832,14 @@ export function createBot() {
     await ctx.answerCallbackQuery();
     ctx.session.adminStep = "edit_name";
     ctx.session.editServiceId = svcId;
-    await ctx.reply(
-      `✏️ <b>Service Name အသစ်</b> ရိုက်ပါ (emoji ထည့်လို့ရ):`,
-      { parse_mode: "HTML" }
-    );
+    try {
+      await ctx.editMessageText(
+        `✏️ <b>Service Name အသစ်</b> ရိုက်ပါ (emoji ထည့်လို့ရ):`,
+        { parse_mode: "HTML" }
+      );
+    } catch {
+      await ctx.reply(`✏️ <b>Service Name အသစ်</b> ရိုက်ပါ (emoji ထည့်လို့ရ):`, { parse_mode: "HTML" });
+    }
   });
 
   // ─── Admin: Confirm Delete ─────────────────────────────────
@@ -869,13 +916,16 @@ export function createBot() {
     ctx.session.adminStep = "add_item_to_svc";
     ctx.session.editServiceId = svcId;
     const isContact = svc.category === "contact";
-    await ctx.reply(
+    const promptText =
       `➕ <b>${escHtml(svc.name)}</b> — Item အသစ်ထည့်\n\n` +
-        (isContact
-          ? `Label ရိုက်ပါ:\nဥပမာ: <code>Telegram Premium</code>`
-          : `Format: <code>label|price</code>\nဥပမာ: <code>1,000 Likes|2000</code>`),
-      { parse_mode: "HTML" }
-    );
+      (isContact
+        ? `Label ရိုက်ပါ:\nဥပမာ: <code>Telegram Premium</code>`
+        : `Format: <code>label|price</code>\nဥပမာ: <code>1,000 Likes|2000</code>`);
+    try {
+      await ctx.editMessageText(promptText, { parse_mode: "HTML" });
+    } catch {
+      await ctx.reply(promptText, { parse_mode: "HTML" });
+    }
   });
 
   // ─── Admin: Item Manage Menu ────────────────────────────────
@@ -911,7 +961,11 @@ export function createBot() {
     ctx.session.adminStep = "edit_price";
     ctx.session.editServiceId = svcId;
     ctx.session.editItemId = itemId;
-    await ctx.reply(`💰 <b>Price အသစ်</b> ရိုက်ပါ (ks):\nဥပမာ: <code>2500</code>`, { parse_mode: "HTML" });
+    try {
+      await ctx.editMessageText(`💰 <b>Price အသစ်</b> ရိုက်ပါ (ks):\nဥပမာ: <code>2500</code>`, { parse_mode: "HTML" });
+    } catch {
+      await ctx.reply(`💰 <b>Price အသစ်</b> ရိုက်ပါ (ks):\nဥပမာ: <code>2500</code>`, { parse_mode: "HTML" });
+    }
   });
 
   // ─── Admin: Edit Item Label (prompt) ──────────────────────
@@ -923,7 +977,11 @@ export function createBot() {
     ctx.session.adminStep = "edit_label";
     ctx.session.editServiceId = svcId;
     ctx.session.editItemId = itemId;
-    await ctx.reply(`✏️ <b>Label အသစ်</b> ရိုက်ပါ:`, { parse_mode: "HTML" });
+    try {
+      await ctx.editMessageText(`✏️ <b>Label အသစ်</b> ရိုက်ပါ:`, { parse_mode: "HTML" });
+    } catch {
+      await ctx.reply(`✏️ <b>Label အသစ်</b> ရိုက်ပါ:`, { parse_mode: "HTML" });
+    }
   });
 
   // ─── Admin: Delete Item ────────────────────────────────────
@@ -960,13 +1018,16 @@ export function createBot() {
     ctx.session.newService.category = category;
     ctx.session.adminStep = "add_items_first";
     const isContact = category === "contact";
-    await ctx.reply(
+    const promptText =
       `📦 <b>Item ပထမဆုံးထည့်ပါ</b>\n\n` +
-        (isContact
-          ? `Label ရိုက်ပါ:\nဥပမာ: <code>Telegram Premium</code>`
-          : `Format: <code>label|price</code>\nဥပမာ: <code>1,000 Likes|2000</code>`),
-      { parse_mode: "HTML" }
-    );
+      (isContact
+        ? `Label ရိုက်ပါ:\nဥပမာ: <code>Telegram Premium</code>`
+        : `Format: <code>label|price</code>\nဥပမာ: <code>1,000 Likes|2000</code>`);
+    try {
+      await ctx.editMessageText(promptText, { parse_mode: "HTML" });
+    } catch {
+      await ctx.reply(promptText, { parse_mode: "HTML" });
+    }
   });
 
   // ─── Admin: Save New Service ───────────────────────────────
@@ -985,11 +1046,19 @@ export function createBot() {
     ctx.session.adminStep = undefined;
     ctx.session.newService = undefined;
     await ctx.answerCallbackQuery(`✅ Service ထည့်ပြီးပါပြီ!`);
-    await ctx.reply(
-      `✅ <b>${escHtml(svc.name)}</b> Service ထည့်ပြီးပါပြီ!\n` +
-        `Items: ${svc.items.length} ခု`,
-      { parse_mode: "HTML", reply_markup: adminMenuKeyboard() }
-    );
+    try {
+      await ctx.editMessageText(
+        `✅ <b>${escHtml(svc.name)}</b> Service ထည့်ပြီးပါပြီ!\n` +
+          `Items: ${svc.items.length} ခု`,
+        { parse_mode: "HTML", reply_markup: adminMenuKeyboard() }
+      );
+    } catch {
+      await ctx.reply(
+        `✅ <b>${escHtml(svc.name)}</b> Service ထည့်ပြီးပါပြီ!\n` +
+          `Items: ${svc.items.length} ခု`,
+        { parse_mode: "HTML", reply_markup: adminMenuKeyboard() }
+      );
+    }
   });
 
   // ═══════════════════════════════════════════════════════════
