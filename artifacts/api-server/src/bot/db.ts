@@ -179,3 +179,21 @@ export async function deleteService(serviceId: string): Promise<void> {
   const filtered = services.filter((s) => s.id !== serviceId);
   await db.push("/services", filtered);
 }
+
+export async function getPremiumEmoji(): Promise<string | null> {
+  try {
+    return await db.getData("/settings/premiumEmoji");
+  } catch {
+    return null;
+  }
+}
+
+export async function setPremiumEmoji(emojiId: string): Promise<void> {
+  await db.push("/settings/premiumEmoji", emojiId, true);
+}
+
+export async function getPremiumEmojiTag(fallback = "⭐"): Promise<string> {
+  const id = await getPremiumEmoji();
+  if (!id) return fallback;
+  return `<tg-emoji emoji-id="${id}">${fallback}</tg-emoji>`;
+}
