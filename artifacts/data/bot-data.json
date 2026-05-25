@@ -485,11 +485,41 @@
             "createdAt": "2026-05-25T09:53:19.413Z",
             "updatedAt": "2026-05-25T09:53:20.502Z",
             "targetInfo": "Harsh"
+        },
+        {
+            "orderId": "𝗢𝗥𝗗-MPL1NLX3-L450",
+            "userId": 1735522859,
+            "username": "Osamu1123",
+            "firstName": "𝘖𝘴𝘢𝘮𝘶",
+            "serviceId": "tiktok",
+            "serviceName": "🎵 TikTok Like/View",
+            "itemId": "tiktok_like_1k",
+            "itemLabel": "1,000 Likes",
+            "itemPrice": 2000,
+            "status": "pending_receipt",
+            "createdAt": "2026-05-25T10:08:59.319Z",
+            "updatedAt": "2026-05-25T10:09:01.263Z",
+            "targetInfo": "Haha"
+        },
+        {
+            "orderId": "𝗢𝗥𝗗-MPL1OQRL-YF84",
+            "userId": 1735522859,
+            "username": "Osamu1123",
+            "firstName": "𝘖𝘴𝘢𝘮𝘶",
+            "serviceId": "dia",
+            "serviceName": "💎 Diamonds (Dia)",
+            "itemId": "dia_500",
+            "itemLabel": "500 Diamonds",
+            "itemPrice": 12000,
+            "status": "pending_receipt",
+            "createdAt": "2026-05-25T10:09:52.257Z",
+            "updatedAt": "2026-05-25T10:09:53.662Z",
+            "targetInfo": "Haha"
         }
     ],
     "sessions": {
         "1735522859": {
-            "pendingOrderId": "𝗢𝗥𝗗-MPL13GOK-1SU0",
+            "pendingOrderId": "𝗢𝗥𝗗-MPL1OQRL-YF84",
             "step": "waiting_receipt"
         },
         "8646459264": {},
