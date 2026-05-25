@@ -1,6 +1,9 @@
 import { Context } from "grammy";
 import { bs } from "./font";
 
+const BOT_LINK = "https://t.me/NFT_Sell_Os_bot";
+const MG_FOOTER = `\n<a href="${BOT_LINK}">🍕 ${bs("MG Pizza Services")}</a>`;
+
 export function generateOrderId(): string {
   const ts = Date.now().toString(36).toUpperCase();
   const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -23,9 +26,9 @@ export function formatOrderSummary(params: {
   msg += `🎯 ${bs("Package")}: ${params.itemLabel}\n`;
   if (params.quantity) msg += `📊 ${bs("Quantity")}: ${params.quantity}\n`;
   if (params.targetInfo) msg += `🔗 ${bs("Target")}: <code>${params.targetInfo}</code>\n`;
-  msg += `💰 ${bs("Amount")}: ${params.price.toLocaleString()} ${params.unit}\n`;
-  msg += `━━━━━━━━━━━━━━━━\n`;
-  msg += `✨ ${bs("MG Pizza Services")}`;
+  msg += `💰 ${bs("Amount")}: ${params.price.toLocaleString()} ${bs("ks")}\n`;
+  msg += `━━━━━━━━━━━━━━━━`;
+  msg += MG_FOOTER;
   return msg;
 }
 
@@ -49,9 +52,10 @@ export function formatReceiptNotification(params: {
   msg += `📦 ${bs("Service")}: ${params.serviceName}\n`;
   msg += `🎯 ${bs("Package")}: ${params.itemLabel}\n`;
   if (params.targetInfo) msg += `🔗 ${bs("Target")}: <code>${params.targetInfo}</code>\n`;
-  msg += `💰 ${bs("Amount")}: ${params.price.toLocaleString()} ${params.unit}\n`;
+  msg += `💰 ${bs("Amount")}: ${params.price.toLocaleString()} ${bs("ks")}\n`;
   msg += `━━━━━━━━━━━━━━━━\n`;
   msg += `⏳ စစ်ဆေးပြီး ${bs("confirm")} လုပ်ပေးပါ`;
+  msg += MG_FOOTER;
   return msg;
 }
 

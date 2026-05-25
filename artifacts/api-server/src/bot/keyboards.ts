@@ -13,7 +13,7 @@ function btn(text: string, callbackData: string, style?: ButtonStyle): any {
 export function mainMenuKeyboard(services: Service[]): InlineKeyboard {
   const kb = new InlineKeyboard();
   for (const svc of services) {
-    kb.add(btn(svc.name, `svc:${svc.id}`, "primary")).row();
+    kb.add(btn(bs(svc.name), `svc:${svc.id}`, "primary")).row();
   }
   return kb;
 }
@@ -22,26 +22,26 @@ export function serviceItemsKeyboard(service: Service): InlineKeyboard {
   const kb = new InlineKeyboard();
   for (const item of service.items) {
     if (item.requireContact) {
-      kb.add(btn(`📞 ${item.label}`, `contact:${service.id}:${item.id}`, "primary")).row();
+      kb.add(btn(`📞 ${bs(item.label)}`, `contact:${service.id}:${item.id}`, "primary")).row();
     } else {
       kb.add(
         btn(
-          `🛒 ${item.label}  ·  ${item.price.toLocaleString()} ks`,
+          `🛒 ${bs(item.label)}  ·  ${item.price.toLocaleString()} ${bs("ks")}`,
           `buy:${service.id}:${item.id}`,
           "success"
         )
       ).row();
     }
   }
-  kb.add(btn(`🔙 ${bs("Back")}`, "back:main")).row();
+  kb.add(btn(`🔙 ${bs("Back")}`, "back:main", "danger")).row();
   return kb;
 }
 
 export function ownerOrderKeyboard(orderId: string): InlineKeyboard {
   return new InlineKeyboard()
-    .add(btn(`✅  ငွေလက်ခံရရှိပါသည်`, `owner:confirm:${orderId}`, "success"))
+    .add(btn(`✅  ${bs("Confirm")} — ငွေလက်ခံရရှိပါသည်`, `owner:confirm:${orderId}`, "success"))
     .row()
-    .add(btn(`❌  လက်ခံမရရှိပါ`, `owner:reject:${orderId}`, "danger"));
+    .add(btn(`❌  ${bs("Reject")} — လက်ခံမရရှိပါ`, `owner:reject:${orderId}`, "danger"));
 }
 
 export function ownerDoneKeyboard(orderId: string): InlineKeyboard {

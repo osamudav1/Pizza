@@ -220,9 +220,41 @@
             "receiptCaption": "",
             "messageId": 34,
             "ownerMessageId": 35
+        },
+        {
+            "orderId": "𝗢𝗥𝗗-MPKR70FL-2IXU",
+            "userId": 8646459264,
+            "username": "Lunanoyume",
+            "firstName": "♡ ʟᴜɴᴀ",
+            "serviceId": "tg_star",
+            "serviceName": "⭐ Telegram Stars",
+            "itemId": "tg_star_50",
+            "itemLabel": "50 Stars",
+            "itemPrice": 3000,
+            "status": "pending_receipt",
+            "createdAt": "2026-05-25T05:16:08.817Z",
+            "updatedAt": "2026-05-25T05:16:08.817Z"
+        },
+        {
+            "orderId": "𝗢𝗥𝗗-MPKR7ABR-QSY1",
+            "userId": 8646459264,
+            "username": "Lunanoyume",
+            "firstName": "♡ ʟᴜɴᴀ",
+            "serviceId": "uc",
+            "serviceName": "🎮 UC (PUBG)",
+            "itemId": "uc_325",
+            "itemLabel": "325 UC",
+            "itemPrice": 7000,
+            "status": "pending_receipt",
+            "createdAt": "2026-05-25T05:16:21.639Z",
+            "updatedAt": "2026-05-25T05:16:21.639Z"
         }
     ],
     "sessions": {
-        "8646459264": {}
+        "8646459264": {
+            "pendingOrderId": "𝗢𝗥𝗗-MPKR7ABR-QSY1",
+            "step": "waiting_receipt"
+        },
+        "-1003916887393": {}
     }
 }

@@ -48,6 +48,7 @@ type MyContext = Context & SessionFlavor<SessionData>;
 const BOT_TOKEN = process.env["BOT_TOKEN"];
 const OWNER_CHAT_ID = process.env["OWNER_CHAT_ID"] || "";
 const KPAY_NUMBER = process.env["KPAY_NUMBER"] || "";
+const GROUP_CHAT_ID = process.env["GROUP_CHAT_ID"] || "";
 
 if (!BOT_TOKEN) {
   throw new Error("BOT_TOKEN environment variable is required");
@@ -398,16 +399,26 @@ export function createBot() {
         targetInfo: order.targetInfo,
       });
 
+      // ── GP group: receipt photo only (no caption) ──
+      if (receiptFileId && GROUP_CHAT_ID) {
+        try {
+          await ctx.api.sendPhoto(GROUP_CHAT_ID, receiptFileId);
+        } catch (err) {
+          logger.warn({ err }, "Failed to forward receipt photo to group");
+        }
+      }
+
+      // ── Owner DM: full notification with confirm/reject buttons ──
       let ownerMsg;
       if (receiptFileId) {
         ownerMsg = await ctx.api.sendPhoto(ownerChatId, receiptFileId, {
           caption: ownerNotifText,
-          parse_mode: "Markdown",
+          parse_mode: "HTML",
           reply_markup: ownerOrderKeyboard(order.orderId),
         });
       } else {
         ownerMsg = await ctx.api.sendMessage(ownerChatId, ownerNotifText, {
-          parse_mode: "Markdown",
+          parse_mode: "HTML",
           reply_markup: ownerOrderKeyboard(order.orderId),
         });
       }
