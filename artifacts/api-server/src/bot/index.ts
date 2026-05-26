@@ -428,40 +428,67 @@ export function createBot() {
 
     await saveOrder(order);
     ctx.session.pendingOrderId = orderId;
-    ctx.session.step = "waiting_target";
 
-    const needsTarget =
-      svc.id === "tg_boost" || svc.id === "tiktok" || svc.id === "tg_star" ||
-      svc.id === "dia" || svc.id === "uc";
+    // Determine targetType from service (new field or legacy service ID)
+    const targetType = svc.targetType ||
+      (svc.id === "uc" ? "uc" : svc.id === "dia" ? "dia" : "general");
 
-    if (needsTarget) {
-      let promptText = "";
-      if (svc.id === "tg_boost") {
-        promptText = `📢 ${bs("Channel/Group username")} ပေးပို့ပါ\n<code>(ဥပမာ: @mychannel)</code>`;
-      } else if (svc.id === "tiktok") {
-        promptText = `🎵 ${bs("TikTok Post/Profile Link")} ပေးပို့ပါ`;
-      } else if (svc.id === "tg_star") {
-        promptText = `⭐ ${bs("Telegram username")} ပေးပို့ပါ\n<code>(ဥပမာ: @myusername)</code>`;
-      } else if (svc.id === "dia") {
-        promptText =
-          `💎 <b>${bs("Mobile Legends")} Game ID နှင့် Server ID</b> ပေးပို့ပါ\n\n` +
-          `Format: <code>GameID (ServerID)</code>\n` +
-          `ဥပမာ: <code>123456789 (1234)</code>`;
-      } else if (svc.id === "uc") {
-        promptText =
-          `🎮 <b>${bs("PUBG Mobile")} Game ID (Character ID)</b> ပေးပို့ပါ\n\n` +
-          `ဥပမာ: <code>5123456789</code>`;
-      }
+    const kpayInfo = `💳 <b>${bs("KPay / Wave")} နံပါတ်:</b> <code>${escHtml(KPAY_NUMBER!)}</code>`;
+    const orderHeader =
+      `📦 ${bs("Service")}: <b>${escHtml(svc.name)}</b>\n` +
+      `🎯 ${bs("Package")}: ${escHtml(item.label)}\n` +
+      `💰 ငွေပမာဏ: <b>${item.price.toLocaleString()} ks</b>\n\n`;
 
+    if (targetType === "uc") {
+      ctx.session.step = "v2_waiting_player_id";
       await ctx.editMessageText(
-        `✅ <b>${bs("Package")} ရွေးချယ်ပြီးပါပြီ!</b>\n\n` +
-          `📦 ${bs("Service")}: <b>${escHtml(svc.name)}</b>\n` +
-          `🎯 ${bs("Package")}: ${escHtml(item.label)}\n` +
-          `💰 ငွေပမာဏ: <b>${item.price.toLocaleString()} ks</b>\n\n` +
-          `${promptText}`,
+        orderHeader + kpayInfo + `\n\n` +
+        `📋 <b>${bs("Player ID")} (Character ID)</b> ရိုက်ထည့်ပါ:\n<i>ဥပမာ: 5123456789</i>`,
+        { parse_mode: "HTML" }
+      );
+    } else if (targetType === "dia") {
+      ctx.session.step = "v2_waiting_player_id";
+      await ctx.editMessageText(
+        orderHeader + kpayInfo + `\n\n` +
+        `📋 <b>${bs("Player ID")}</b> ရိုက်ထည့်ပါ:`,
+        { parse_mode: "HTML" }
+      );
+    } else if (svc.id === "tg_boost") {
+      ctx.session.step = "waiting_target";
+      await ctx.editMessageText(
+        orderHeader + `📢 ${bs("Channel/Group username")} ပေးပို့ပါ\n<code>(ဥပမာ: @mychannel)</code>`,
+        { parse_mode: "HTML" }
+      );
+    } else if (svc.id === "tiktok") {
+      ctx.session.step = "waiting_target";
+      await ctx.editMessageText(
+        orderHeader + `🎵 ${bs("TikTok Post/Profile Link")} ပေးပို့ပါ`,
+        { parse_mode: "HTML" }
+      );
+    } else if (svc.id === "tg_star") {
+      ctx.session.step = "waiting_target";
+      await ctx.editMessageText(
+        orderHeader + `⭐ ${bs("Telegram username")} ပေးပို့ပါ\n<code>(ဥပမာ: @myusername)</code>`,
+        { parse_mode: "HTML" }
+      );
+    } else if (item.requireContact) {
+      // Contact item — show owner link
+      ctx.session.step = undefined;
+      ctx.session.pendingOrderId = undefined;
+      await ctx.editMessageText(
+        `📞 <b>${escHtml(item.label)}</b>\n\n` +
+        `ဤ service အတွက် owner ထံ တိုက်ရိုက်ဆက်သွယ်ပေးပါ`,
+        { parse_mode: "HTML", reply_markup: contactOwnerKeyboard() }
+      );
+    } else if (targetType === "general") {
+      ctx.session.step = "waiting_target";
+      await ctx.editMessageText(
+        orderHeader + kpayInfo + `\n\n` +
+        `📋 ${bs("Target Info")} (username, link, etc.) ရိုက်ထည့်ပါ:`,
         { parse_mode: "HTML" }
       );
     } else {
+      // Instant — no target needed, straight to receipt
       ctx.session.step = "waiting_receipt";
       await ctx.editMessageText(
         formatOrderSummary({
@@ -471,7 +498,7 @@ export function createBot() {
           price: item.price,
           unit: item.unit,
         }) +
-          `\n\n💳 <b>${bs("KPay / Wave")} နံပါတ်:</b> <code>${KPAY_NUMBER}</code>\n\n` +
+          `\n\n${kpayInfo}\n\n` +
           `📸 ငွေလွှဲပြေစာ ဓာတ်ပုံ (သို့မဟုတ်) ငွေလွှဲ ${bs("screenshot")} ကို ဤနေရာတွင် ပို့ပေးပါ`,
         { parse_mode: "HTML" }
       );
@@ -578,7 +605,9 @@ export function createBot() {
       const order = await getOrder(ctx.session.pendingOrderId);
       if (!order) return;
       const svc = (await getServices()).find((s) => s.id === order.serviceId);
-      const targetType = svc?.targetType || "uc";
+      // Fallback: check service ID for legacy services without targetType set
+      const targetType = svc?.targetType ||
+        (svc?.id === "dia" ? "dia" : "uc");
 
       if (targetType === "dia") {
         // Save player ID, ask for server ID next
