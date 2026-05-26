@@ -83,15 +83,21 @@ export function createBot() {
   // ─── Premium Emoji Transformer ─────────────────────────────
   bot.api.config.use(async (prev, method, payload, signal) => {
     const p = payload as any;
-    // Message စာသား (text) သို့မဟုတ် ပုံစာ (caption) ထဲမှာ emoji ပါရင် ပြောင်းမယ်
     if (p && (typeof p.text === "string" || typeof p.caption === "string")) {
       const targetField = typeof p.text === "string" ? "text" : "caption";
       const originalText = p[targetField];
       const replacedText = await applyPremiumEmojis(originalText);
 
+      logger.info({
+        method,
+        hasEmoji: replacedText !== originalText,
+        original: originalText?.slice(0, 80),
+        replaced: replacedText?.slice(0, 80),
+      }, "PremiumEmojiTransformer");
+
       if (replacedText !== originalText) {
         p[targetField] = replacedText;
-        p.parse_mode = "HTML"; // Premium emoji tag အလုပ်လုပ်ဖို့ HTML mode ဖြစ်ရပါမယ်
+        p.parse_mode = "HTML";
       }
     }
     return prev(method, payload, signal);
