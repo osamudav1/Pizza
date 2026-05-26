@@ -25,10 +25,13 @@ app.listen(port, (err) => {
   logger.info({ port }, "Server listening");
 
   // Start Telegram bot
-  const bot = createBot();
-  bot.start({
-    onStart: (info) => {
-      logger.info({ username: info.username }, "Telegram bot started");
-    },
+  createBot().then((bot) => {
+    bot.start({
+      onStart: (info) => {
+        logger.info({ username: info.username }, "Telegram bot started");
+      },
+    });
+  }).catch((err) => {
+    logger.error({ err }, "Failed to start Telegram bot");
   });
 });

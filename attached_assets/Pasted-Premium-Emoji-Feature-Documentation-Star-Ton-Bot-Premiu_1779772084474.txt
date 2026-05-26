@@ -1,0 +1,55 @@
+Premium Emoji Feature Documentation
+ဤစာရွက်စာတမ်းသည် Star Ton Bot တွင် Premium Emoji feature မည်သို့အလုပ်လုပ်ပုံ၊ ၎င်း၏ဖွဲ့စည်းပုံနှင့် အသုံးပြုပုံတို့ကို အသေးစိတ်ရှင်းပြထားပါသည်။
+
+၁. Feature ၏ ခြုံငုံသုံးသပ်ချက် (Overview)
+Star Ton Bot ၏ Premium Emoji feature သည် bot မှ ပေးပို့သော မက်ဆေ့ချ်များရှိ သာမန် emoji များကို Telegram ၏ custom premium emoji များဖြင့် အလိုအလျောက် အစားထိုးနိုင်စေရန် ရည်ရွယ်ပါသည်။ ၎င်းသည် bot ၏ မက်ဆေ့ချ်များကို ပိုမိုဆွဲဆောင်မှုရှိစေပြီး အမြင်အာရုံကို မြှင့်တင်ပေးပါသည်။ ဤ feature တွင် အဓိက အစိတ်အပိုင်းသုံးခု ပါဝင်သည်:
+
+	1.	Emoji Mapping Management: Bot owner များသည် `/premium` command ကို အသုံးပြု၍ သာမန် emoji များကို custom emoji ID များနှင့် တွဲဖက်သတ်မှတ်ခြင်း၊ ပြင်ဆင်ခြင်းနှင့် ဖျက်ခြင်းတို့ကို ပြုလုပ်နိုင်ပါသည်။ ဤ mapping များကို MongoDB တွင် သိမ်းဆည်းထားပြီး bot restart လုပ်သည့်တိုင်အောင် တည်မြဲနေပါသည်။
+	2.	Automatic Emoji Replacement: Bot မှ မက်ဆေ့ချ်များ ပေးပို့သည့်အခါတိုင်း၊ ၎င်းမက်ဆေ့ချ်ပါ စာသား (သို့မဟုတ် caption) ကို စစ်ဆေးပြီး သတ်မှတ်ထားသော သာမန် emoji များကို ၎င်းတို့၏ သက်ဆိုင်ရာ custom emoji tag များဖြင့် အစားထိုးပေးပါသည်။
+	3.	HTML Parse Mode Enforcement: Premium emoji tag များ ထည့်သွင်းပြီးပါက Telegram မှ မှန်ကန်စွာ ပြသနိုင်ရန် မက်ဆေ့ချ်၏ `parse_mode` ကို `HTML` အဖြစ် အလိုအလျောက် သတ်မှတ်ပေးပါသည်။
+
+၂. Code Structure နှင့် အစိတ်အပိုင်းများ
+Premium Emoji feature ကို အောက်ပါ အဓိကဖိုင်များနှင့် လုပ်ဆောင်ချက်များဖြင့် အကောင်အထည်ဖော်ထားသည်:
+
+၂.၁. `emojis.ts`
+ဤဖိုင်တွင် bot မှ အသုံးပြုသော emoji စာရင်းနှင့် မက်ဆေ့ချ်စာသားအတွင်းရှိ emoji များကို premium emoji များဖြင့် အစားထိုးသည့် logic ပါဝင်သည်။
+
+`applyPremiumEmojis(text: string): string` function
+
+ဤ function သည် ဝင်လာသော `text` string ကိုယူပြီး `getPremiumEmojiMap()` မှ ရရှိသော mapping ကို အသုံးပြု၍ သာမန် emoji များကို `<tg-emoji emoji-id="<LaTex>${id}">$</LaTex>{emoji}</tg-emoji>` format ဖြင့် အစားထိုးပါသည်။
+
+Code နမူနာ (`emojis.ts` မှ)
+
+
+￼
+၂.၂. `storage.ts`
+ဤဖိုင်သည် premium emoji mapping များကို MongoDB တွင် သိမ်းဆည်းခြင်းနှင့် ပြန်လည်ရယူခြင်းတို့ကို ဆောင်ရွက်ပါသည်။ `premiumEmojiMap` ဟူသော in-memory Map ကို အသုံးပြု၍ mapping များကို bot ၏ runtime အတွင်း လျင်မြန်စွာ ဝင်ရောက်ကြည့်ရှုနိုင်စေပါသည်။
+
+အဓိက လုပ်ဆောင်ချက်များ:
+
+	•	`premiumEmojiMap`: `Map<string, string>` အမျိုးအစား in-memory cache ဖြစ်ပြီး `emoji` (key) နှင့် `customEmojiId` (value) ကို သိမ်းဆည်းသည်။
+	•	`loadPremiumEmojis()`: Bot စတင်ချိန်တွင် `premium_emojis` collection မှ mapping အားလုံးကို MongoDB မှ ရယူပြီး `premiumEmojiMap` ကို ဖြည့်သွင်းသည်။
+	•	`setPremiumEmoji(emoji: string, customEmojiId: string)`: သာမန် emoji တစ်ခုကို custom emoji ID နှင့် တွဲဖက်သတ်မှတ်ပြီး `premiumEmojiMap` နှင့် MongoDB နှစ်ခုလုံးတွင် သိမ်းဆည်းသည်။
+	•	`removePremiumEmoji(emoji: string)`: သတ်မှတ်ထားသော emoji ၏ mapping ကို `premiumEmojiMap` နှင့် MongoDB နှစ်ခုလုံးမှ ဖယ်ရှားသည်။
+	•	`clearPremiumEmojis()`: mapping အားလုံးကို `premiumEmojiMap` နှင့် MongoDB နှစ်ခုလုံးမှ ဖယ်ရှားသည်။
+	•	`getPremiumEmojiMap()`: လက်ရှိ `premiumEmojiMap` ကို ပြန်လည်ပေးပို့သည်။
+
+Code နမူနာ (`storage.ts` မှ)
+
+
+￼
+၂.၃. `premium.ts`
+ဤဖိုင်သည် `/premium` command ကို ကိုင်တွယ်သော handler ကို ပါဝင်သည်။ ၎င်းသည် bot owner များအား premium emoji mapping များကို စီမံခန့်ခွဲနိုင်စေရန် ကူညီပေးသည်။
+
+`handlePremiumCommand(ctx: BotContext, args: string)` function
+
+	•	`args` ပေါ်မူတည်၍ မတူညီသော လုပ်ဆောင်ချက်များကို လုပ်ဆောင်သည်။
+	◦	`/premium`: လက်ရှိ mapping များနှင့် bot ၏ emoji စာရင်းကို ပြသသည်။
+	◦	`/premium clear`: mapping အားလုံးကို ဖျက်သည်။
+	◦	`/premium remove <emoji>`: သတ်မှတ်ထားသော emoji ၏ mapping ကို ဖယ်ရှားသည်။
+	◦	`/premium <emoji> <customEmojiId>`: သာမန် emoji တစ်ခုကို custom emoji ID နှင့် တွဲဖက်သတ်မှတ်သည်။ `customEmojiId` သည် ဂဏန်းသက်သက်ဖြစ်ရမည်ဟု စစ်ဆေးသည်။
+
+Code နမူနာ (`premium.ts` မှ)
+
+
+￼
