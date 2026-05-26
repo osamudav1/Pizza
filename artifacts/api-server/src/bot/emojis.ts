@@ -2,6 +2,11 @@ import { db } from "./db";
 
 const DB_PATH = "/settings/premiumEmojiMap";
 
+// Unicode variation selector (\uFE0E, \uFE0F) ဖြုတ်ပါ
+function normalizeEmoji(emoji: string): string {
+  return emoji.replace(/[\uFE0E\uFE0F]/g, "").trim();
+}
+
 async function loadMap(): Promise<Map<string, string>> {
   try {
     const raw: Record<string, string> = await db.getData(DB_PATH);
@@ -21,14 +26,15 @@ async function saveMap(map: Map<string, string>): Promise<void> {
 
 export async function addPremiumEmojiMapping(emoji: string, id: string): Promise<void> {
   const map = await loadMap();
-  map.set(emoji, id);
+  map.set(normalizeEmoji(emoji), id);
   await saveMap(map);
 }
 
 export async function deletePremiumEmojiMapping(emoji: string): Promise<boolean> {
   const map = await loadMap();
-  const existed = map.has(emoji);
-  map.delete(emoji);
+  const normalized = normalizeEmoji(emoji);
+  const existed = map.has(normalized);
+  map.delete(normalized);
   await saveMap(map);
   return existed;
 }
@@ -53,10 +59,10 @@ export async function applyPremiumEmojis(text: string): Promise<string> {
 
   let result = text;
   for (const [emoji, id] of map.entries()) {
-    result = result.replaceAll(
-      emoji,
-      `<tg-emoji emoji-id="${id}">${emoji}</tg-emoji>`
-    );
+    const tag = `<tg-emoji emoji-id="${id}">${emoji}</tg-emoji>`;
+    // Variation selector (\uFE0F / \uFE0E) ပါသည့် version နဲ့ မပါသည့် version နှစ်ခုလုံး replace လုပ်ပါ
+    const escaped = emoji.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    result = result.replace(new RegExp(`${escaped}[\uFE0E\uFE0F]?`, "gu"), tag);
   }
   return result;
 }
