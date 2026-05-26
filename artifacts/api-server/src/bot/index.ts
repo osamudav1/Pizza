@@ -637,13 +637,12 @@ export function createBot() {
       if (!text) return;
       const playerId = ctx.session.collectedPlayerId || "?";
       await updateOrder(ctx.session.pendingOrderId, {
-        targetInfo: `Player ID: ${playerId}\nServer ID: ${text}`,
+        targetInfo: `Game ID: ${playerId} ${text}`,
       });
       ctx.session.step = "waiting_receipt";
       ctx.session.collectedPlayerId = undefined;
       await ctx.reply(
-        `✅ ${bs("Player ID")}: <code>${escHtml(playerId)}</code>\n` +
-        `✅ ${bs("Server ID")}: <code>${escHtml(text)}</code>\n\n` +
+        `✅ <b>${bs("Game ID")}:</b> <code>${escHtml(playerId)} ${escHtml(text)}</code>\n\n` +
         `📸 <b>${bs("KPay/Wave")} ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`,
         { parse_mode: "HTML" }
       );
