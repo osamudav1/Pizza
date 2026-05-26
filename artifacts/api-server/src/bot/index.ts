@@ -185,41 +185,71 @@ export function createBot() {
 
     // /premium emojis  → list every emoji used in bot messages + mapping status
     if (parts[0] === "emojis") {
-      const BOT_EMOJIS: { emoji: string; where: string }[] = [
-        { emoji: "✨", where: "Welcome message" },
-        { emoji: "🍕", where: "Welcome / Footer" },
-        { emoji: "👤", where: "Welcome / Customer label" },
-        { emoji: "🛒", where: "Service menu" },
-        { emoji: "⬇️", where: "Service menu" },
+      const BOT_EMOJIS: { emoji: string; where: string; section?: string }[] = [
+        // ── Customer-facing ──
+        { emoji: "✨", where: "Welcome message", section: "👥 Customer" },
+        { emoji: "🍕", where: "Brand footer / MG Pizza" },
+        { emoji: "👤", where: "Customer label" },
+        { emoji: "🛒", where: "ဝယ်ယူရန် button" },
+        { emoji: "🔙", where: "Back button" },
+        { emoji: "📩", where: "Owner contact button" },
+        { emoji: "👇", where: "Guide / Direction" },
+        { emoji: "🔹", where: "Bullet / List item" },
+        { emoji: "🙏", where: "Thank you message" },
+        { emoji: "💬", where: "Message / Chat" },
+        { emoji: "⚡", where: "Fast / Quick" },
+        // ── Order Flow ──
+        { emoji: "🧾", where: "Order Summary – Header", section: "📋 Order" },
+        { emoji: "🆔", where: "Order ID / User ID" },
         { emoji: "📦", where: "Order Summary – Service" },
         { emoji: "🎯", where: "Order Summary – Package" },
+        { emoji: "📊", where: "Order Summary – Quantity" },
         { emoji: "💰", where: "Order Summary – Amount" },
-        { emoji: "🧾", where: "Order Summary – Header" },
-        { emoji: "🆔", where: "Order Summary – Order/User ID" },
         { emoji: "🔗", where: "Order Summary – Target" },
         { emoji: "💳", where: "KPay / Wave prompt" },
         { emoji: "📸", where: "Receipt upload prompt" },
         { emoji: "🔔", where: "Owner notification" },
         { emoji: "⏳", where: "Pending / Processing" },
-        { emoji: "✅", where: "Success messages" },
+        { emoji: "📤", where: "Broadcast / Share" },
+        // ── Status ──
+        { emoji: "✅", where: "Success messages", section: "🚦 Status" },
         { emoji: "❌", where: "Error messages" },
-        { emoji: "📢", where: "Telegram Boost prompt" },
-        { emoji: "🎵", where: "TikTok prompt" },
-        { emoji: "⭐", where: "Telegram Star prompt" },
-        { emoji: "💎", where: "MLbb Diamond prompt" },
-        { emoji: "🎮", where: "PUBG UC prompt" },
-        { emoji: "📞", where: "Contact / Others" },
-        { emoji: "⚙️", where: "Admin panel" },
+        { emoji: "⚠️", where: "Warning messages" },
+        // ── Service-specific ──
+        { emoji: "📢", where: "Telegram Boost service", section: "🛍 Services" },
+        { emoji: "🎵", where: "TikTok service" },
+        { emoji: "⭐", where: "Telegram Star service" },
+        { emoji: "💎", where: "MLbb Diamonds service" },
+        { emoji: "🎮", where: "PUBG UC service" },
+        { emoji: "📞", where: "Contact / Others service" },
+        // ── Admin Panel ──
+        { emoji: "⚙️", where: "Admin panel header", section: "⚙️ Admin" },
+        { emoji: "📝", where: "Caption / Edit input" },
+        { emoji: "✏️", where: "Edit button" },
+        { emoji: "➕", where: "Add button" },
+        { emoji: "🗑️", where: "Delete button" },
+        { emoji: "⏭", where: "Skip button" },
+        { emoji: "📋", where: "List view" },
+        // ── Internal / Debug ──
+        { emoji: "💡", where: "Tip / Info messages", section: "🔧 Internal" },
+        { emoji: "🔍", where: "Debug / Search" },
+        { emoji: "📌", where: "Note / Pin" },
+        { emoji: "🎭", where: "Emoji Manager header" },
+        { emoji: "🧪", where: "Test command" },
       ];
       const map = await getPremiumEmojiMap();
-      let text = `🎭 <b>Bot Emoji List</b>\n<i>premium ID map လုပ်လို့ ရတဲ့ emoji များ</i>\n\n━━━━━━━━━━━━━━━━━━━━━━\n`;
-      for (const { emoji, where } of BOT_EMOJIS) {
-        const id = map.get(emoji);
-        const status = id ? `✅ <code>${escHtml(id.slice(0, 10))}…</code>` : `⬜ not mapped`;
-        text += `${emoji}  ${status}\n<i>${escHtml(where)}</i>\n\n`;
+      const mapped = [...map.keys()].length;
+      let text = `🎭 <b>Bot Emoji List</b> (${mapped}/${BOT_EMOJIS.length} mapped)\n\n`;
+      for (const { emoji, where, section } of BOT_EMOJIS) {
+        if (section) text += `\n<b>${escHtml(section)}</b>\n`;
+        const normalKey = emoji.replace(/[\uFE0E\uFE0F]/g, "");
+        const id = map.get(normalKey) || map.get(emoji);
+        const status = id ? `✅ mapped` : `⬜`;
+        text += `${emoji} ${status}  <i>${escHtml(where)}</i>\n`;
       }
-      text += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-      text += `Map လုပ်ရန်: <code>/premium 🧾 &lt;ID&gt;</code>`;
+      text += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+      text += `Map လုပ်ရန်: <code>/premium [emoji] [ID]</code>\n`;
+      text += `စစ်ဆေးရန်: <code>/premium test [emoji]</code>`;
       await ctx.reply(text, { parse_mode: "HTML" });
       return;
     }
