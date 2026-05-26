@@ -16,10 +16,6 @@ import {
 } from "./db";
 import {
   applyPremiumEmojis,
-  debugPremiumEmojis,
-  setPremiumEmojiMapping,
-  removePremiumEmojiMapping,
-  getPremiumEmojiMap,
   extractFirstEmoji,
 } from "./emojis";
 import {
@@ -84,16 +80,15 @@ export function createBot() {
   // ─── Premium Emoji Transformer ─────────────────────────────
   bot.api.config.use(async (prev, method, payload, signal) => {
     const p = payload as any;
-    if (p) {
-      for (const field of ["text", "caption"]) {
-        if (typeof p[field] === "string") {
-          const replaced = await applyPremiumEmojis(p[field]);
-          if (replaced !== p[field]) {
-            logger.info({ method, field }, "[premium-emoji] replaced emoji in outgoing message");
-            p[field] = replaced;
-            if (!p.parse_mode) p.parse_mode = "HTML";
-          }
-        }
+    // Message စာသား (text) သို့မဟုတ် ပုံစာ (caption) ထဲမှာ emoji ပါရင် ပြောင်းမယ်
+    if (p && (typeof p.text === "string" || typeof p.caption === "string")) {
+      const targetField = typeof p.text === "string" ? "text" : "caption";
+      const originalText = p[targetField];
+      const replacedText = await applyPremiumEmojis(originalText);
+
+      if (replacedText !== originalText) {
+        p[targetField] = replacedText;
+        p.parse_mode = "HTML"; // Premium emoji tag အလုပ်လုပ်ဖို့ HTML mode ဖြစ်ရပါမယ်
       }
     }
     return prev(method, payload, signal);
@@ -150,218 +145,7 @@ export function createBot() {
     const arg = ctx.match?.trim() || "";
     const parts = arg.split(/\s+/);
 
-    // /premium remove <emoji>  → remove single mapping
-    if (parts[0] === "remove" && parts[1]) {
-      await removePremiumEmojiMapping(parts[1]);
-      await ctx.reply(
-        `✅ ${parts[1]} → default ပြန်ပြောင်းပြီးပါပြီ`,
-        { parse_mode: "HTML" }
-      );
-      return;
-    }
-
-    // /premium clear  → remove ALL mappings
-    if (parts[0] === "clear" && !parts[1]) {
-      try { await db.delete("/settings/emojiMap"); } catch {}
-      await ctx.reply(`✅ Mapping အကုန် ဖျက်ပြီးပါပြီ`, { parse_mode: "HTML" });
-      return;
-    }
-
-    // /premium list  → show current mappings
-    if (parts[0] === "list") {
-      const map = await getPremiumEmojiMap();
-      if (map.size === 0) {
-        await ctx.reply(`📋 Mapping မရှိသေးပါ`, { parse_mode: "HTML" });
-        return;
-      }
-      let text = `⭐ <b>Premium Emoji Manager</b>\n\n━━━━━━━━━━━━━━━━━━━━━━\n📌 <b>Current Mappings:</b>\n\n`;
-      for (const [emoji, id] of map.entries()) {
-        text += `${emoji} → <code>${escHtml(id)}</code>\n`;
-      }
-      text += `━━━━━━━━━━━━━━━━━━━━━━`;
-      await ctx.reply(text, { parse_mode: "HTML" });
-      return;
-    }
-
-    // /premium emojis  → list every emoji used in bot messages + mapping status
-    if (parts[0] === "emojis") {
-      const BOT_EMOJIS: { emoji: string; where: string; section?: string }[] = [
-        // ── Customer-facing ──
-        { emoji: "✨", where: "Welcome message", section: "👥 Customer" },
-        { emoji: "🍕", where: "Brand footer / MG Pizza" },
-        { emoji: "👤", where: "Customer label" },
-        { emoji: "🛒", where: "ဝယ်ယူရန် button" },
-        { emoji: "🔙", where: "Back button" },
-        { emoji: "📩", where: "Owner contact button" },
-        { emoji: "👇", where: "Guide / Direction" },
-        { emoji: "🔹", where: "Bullet / List item" },
-        { emoji: "🙏", where: "Thank you message" },
-        { emoji: "💬", where: "Message / Chat" },
-        { emoji: "⚡", where: "Fast / Quick" },
-        // ── Order Flow ──
-        { emoji: "🧾", where: "Order Summary – Header", section: "📋 Order" },
-        { emoji: "🆔", where: "Order ID / User ID" },
-        { emoji: "📦", where: "Order Summary – Service" },
-        { emoji: "🎯", where: "Order Summary – Package" },
-        { emoji: "📊", where: "Order Summary – Quantity" },
-        { emoji: "💰", where: "Order Summary – Amount" },
-        { emoji: "🔗", where: "Order Summary – Target" },
-        { emoji: "💳", where: "KPay / Wave prompt" },
-        { emoji: "📸", where: "Receipt upload prompt" },
-        { emoji: "🔔", where: "Owner notification" },
-        { emoji: "⏳", where: "Pending / Processing" },
-        { emoji: "📤", where: "Broadcast / Share" },
-        // ── Status ──
-        { emoji: "✅", where: "Success messages", section: "🚦 Status" },
-        { emoji: "❌", where: "Error messages" },
-        { emoji: "⚠️", where: "Warning messages" },
-        // ── Service-specific ──
-        { emoji: "📢", where: "Telegram Boost service", section: "🛍 Services" },
-        { emoji: "🎵", where: "TikTok service" },
-        { emoji: "⭐", where: "Telegram Star service" },
-        { emoji: "💎", where: "MLbb Diamonds service" },
-        { emoji: "🎮", where: "PUBG UC service" },
-        { emoji: "📞", where: "Contact / Others service" },
-        // ── Admin Panel ──
-        { emoji: "⚙️", where: "Admin panel header", section: "⚙️ Admin" },
-        { emoji: "📝", where: "Caption / Edit input" },
-        { emoji: "✏️", where: "Edit button" },
-        { emoji: "➕", where: "Add button" },
-        { emoji: "🗑️", where: "Delete button" },
-        { emoji: "⏭", where: "Skip button" },
-        { emoji: "📋", where: "List view" },
-        // ── Internal / Debug ──
-        { emoji: "💡", where: "Tip / Info messages", section: "🔧 Internal" },
-        { emoji: "🔍", where: "Debug / Search" },
-        { emoji: "📌", where: "Note / Pin" },
-        { emoji: "🎭", where: "Emoji Manager header" },
-        { emoji: "🧪", where: "Test command" },
-      ];
-      const map = await getPremiumEmojiMap();
-      const mapped = [...map.keys()].length;
-      let text = `🎭 <b>Bot Emoji List</b> (${mapped}/${BOT_EMOJIS.length} mapped)\n\n`;
-      for (const { emoji, where, section } of BOT_EMOJIS) {
-        if (section) text += `\n<b>${escHtml(section)}</b>\n`;
-        const normalKey = emoji.replace(/[\uFE0E\uFE0F]/g, "");
-        const id = map.get(normalKey) || map.get(emoji);
-        const status = id ? `✅ mapped` : `⬜`;
-        text += `${emoji} ${status}  <i>${escHtml(where)}</i>\n`;
-      }
-      text += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
-      text += `Map လုပ်ရန်: <code>/premium [emoji] [ID]</code>\n`;
-      text += `စစ်ဆေးရန်: <code>/premium test [emoji]</code>`;
-      await ctx.reply(text, { parse_mode: "HTML" });
-      return;
-    }
-
-    // /premium test <text>  → test replacement on given text
-    if (parts[0] === "test") {
-      const testInput = parts.slice(1).join(" ") || "💎✨⭐🎮";
-      const testOutput = await applyPremiumEmojis(testInput);
-      const changed = testOutput !== testInput;
-      await ctx.reply(
-        `🧪 <b>Premium Emoji Test</b>\n\n` +
-        `Input: ${escHtml(testInput)}\n` +
-        `Status: ${changed ? "✅ Replaced!" : "❌ NOT replaced (map empty or no match)"}\n\n` +
-        (changed ? `Raw HTML:\n<code>${escHtml(testOutput)}</code>\n\n👇 Rendered:` : `<i>Map လုပ်ရန်: /premium [emoji] [ID]</i>`),
-        { parse_mode: "HTML" }
-      );
-      if (changed) {
-        await ctx.reply(testOutput, { parse_mode: "HTML" });
-      }
-      return;
-    }
-
-    // /premium debug  → full diagnostic of emoji map + replacement test
-    if (parts[0] === "debug") {
-      const info = await debugPremiumEmojis();
-
-      if (info.mapSize === 0) {
-        await ctx.reply(
-          `⚠️ <b>Mapping မရှိသေးပါ</b>\n\n` +
-          `Premium emoji map လုပ်ရန်:\n` +
-          `1. <code>/premium</code> ကိုနှိပ်ပါ\n` +
-          `2. Premium emoji ကို bot ဆီ send လုပ်ပါ (auto-detect)\n\n` +
-          `သို့မဟုတ် manual: <code>/premium [emoji] [ID]</code>`,
-          { parse_mode: "HTML" }
-        );
-        return;
-      }
-
-      let debugText = `🔍 <b>Premium Emoji Debug</b>\n\n`;
-      debugText += `📊 Mapped emojis: <b>${info.mapSize} ခု</b>\n\n`;
-
-      for (const e of info.entries) {
-        debugText += `━━━━━━━━━━━━\n`;
-        debugText += `Emoji: ${e.emoji}\n`;
-        debugText += `Codepoints: <code>${escHtml(e.codepoints)}</code>\n`;
-        debugText += `ID: <code>${escHtml(e.id)}</code>\n`;
-      }
-
-      debugText += `━━━━━━━━━━━━\n\n`;
-      debugText += `✅ Replacement working: <b>${info.replaced ? "YES" : "NO ❌"}</b>\n\n`;
-      debugText += `📝 Raw HTML (after replacement):\n<code>${escHtml(info.testOutput)}</code>`;
-
-      await ctx.reply(debugText, { parse_mode: "HTML" });
-
-      // Send a rendered version so owner can see if it looks different
-      if (info.replaced) {
-        await ctx.reply(
-          `👇 <b>Rendered (Telegram ပြတဲ့ပုံ):</b>\n\n` + info.testOutput + `\n\n<i>Premium emoji ဆိုရင် animated/custom ဖြစ်ရမည်\nRegular emoji အတိုင်းဆိုရင် ID မမှန်ပါ</i>`,
-          { parse_mode: "HTML" }
-        );
-      }
-      return;
-    }
-
-    // /premium <emoji> <id>  → map emoji to premium ID
-    if (parts.length >= 2) {
-      const emoji = parts[0];
-      const id = parts[1];
-      await setPremiumEmojiMapping(emoji, id);
-      await ctx.reply(
-        `✅ <b>Mapped!</b>\n\n${emoji} → <code>${escHtml(id)}</code>`,
-        { parse_mode: "HTML" }
-      );
-      return;
-    }
-
-    // /premium  → show manager UI + activate auto-detect
-    const map = await getPremiumEmojiMap();
-    let currentText = `📌 <b>Current Mappings:</b>\n`;
-    if (map.size === 0) {
-      currentText += `<i>မရှိသေးပါ</i>\n`;
-    } else {
-      for (const [emoji, id] of map.entries()) {
-        currentText += `${emoji} → <code>${escHtml(id)}</code>\n`;
-      }
-    }
-    await ctx.reply(
-      `⭐ <b>Premium Emoji Manager</b>\n\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━\n` +
-        currentText +
-        `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `💡 <b>Auto-detect (Telegram Premium လိုအပ်):</b>\n` +
-        `Premium custom emoji တစ်ခုကို ယခု ဒီ chat ထဲ send လုပ်ပါ\n` +
-        `Bot က ID ကို auto map လုပ်ပေးမည်\n\n` +
-        `📌 <b>Manual Method (Premium မလိုပါ):</b>\n` +
-        `1. Premium emoji ပါသော message ကို forward လုပ်ပါ\n` +
-        `   (Group/Channel မှ forward → bot auto-detect)\n` +
-        `2. သို့မဟုတ် ID သိလျှင်:\n` +
-        `   <code>/premium 💎 5368324170819986680</code>\n\n` +
-        `📌 <b>Commands:</b>\n` +
-        `<code>/premium [emoji] [ID]</code> — manual map\n` +
-        `<code>/premium test [emoji]</code> — စစ်ဆေး\n` +
-        `<code>/premium remove [emoji]</code> — ဖျက်\n` +
-        `<code>/premium clear</code> — အကုန် ဖျက်\n` +
-        `<code>/premium list</code> — mapping list\n` +
-        `<code>/premium debug</code> — full diagnostic\n\n` +
-        `💎 <b>Emoji ID ရှာနည်း:</b>\n` +
-        `@Stickers bot → emoji sticker pack → ID copy\n` +
-        `သို့မဟုတ် @RawDataBot → message forward → custom_emoji_id`,
-      { parse_mode: "HTML" }
-    );
-    ctx.session.step = "waiting_premium_emoji";
+    await ctx.reply("⭐ <b>Premium Emoji Manager</b>\n\nPremium Emoji များ အလုပ်လုပ်ရန် code ထဲတွင် သတ်မှတ်ထားပြီး ဖြစ်ပါသည်။", { parse_mode: "HTML" });
   });
 
   // ─── Callback: Service Selection ──────────────────────────
@@ -639,30 +423,7 @@ export function createBot() {
   bot.on(["message:text", "message:photo"], async (ctx) => {
     const ownerChatId = Number(OWNER_CHAT_ID);
 
-    // ── Owner: extract premium emoji from message ──
-    if (isOwner(ctx, OWNER_CHAT_ID) && ctx.session.step === "waiting_premium_emoji") {
-      const entities = ctx.message && "entities" in ctx.message ? ctx.message.entities : [];
-      const customEmojiEntity = (entities || []).find((e: any) => e.type === "custom_emoji");
-      if (customEmojiEntity && (customEmojiEntity as any).custom_emoji_id) {
-        const emojiId = (customEmojiEntity as any).custom_emoji_id;
-        const msgText = ctx.message && "text" in ctx.message ? ctx.message.text || "" : "";
-        const emojiChar = extractFirstEmoji(msgText);
-        await setPremiumEmojiMapping(emojiChar, emojiId);
-        await ctx.reply(
-          `✅ <b>${bs("Premium Emoji")} သတ်မှတ်ပြီးပါပြီ!</b>\n\n` +
-            `${emojiChar} → <code>${escHtml(emojiId)}</code>`,
-          { parse_mode: "HTML" }
-        );
-        ctx.session.step = undefined;
-        return;
-      } else {
-        await ctx.reply(
-          `❌ ${bs("Custom emoji")} မတွေ့ပါ။ Premium emoji ကို တိုက်ရိုက်ပေးပို့ပါ\nသို့မဟုတ် <code>/premium [emoji] [ID]</code> သုံးပါ`,
-          { parse_mode: "HTML" }
-        );
-        return;
-      }
-    }
+
 
     // ── Admin text input flow ──
     if (isOwner(ctx, OWNER_CHAT_ID) && ctx.session.adminStep) {
