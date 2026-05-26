@@ -62,6 +62,8 @@ interface SessionData {
   editItemId?: string;
   editField?: string;
   collectedPlayerId?: string;
+  premium_emoji_step?: string;
+  premium_original_emoji?: string;
 }
 
 type MyContext = Context & SessionFlavor<SessionData>;
@@ -144,10 +146,6 @@ export async function createBot() {
   });
 
   // ─── /premium ─────────────────────────────────────────────
-  // /premium                    → list
-  // /premium 👛 <id>            → add/update
-  // /premium remove 👛          → remove one
-  // /premium clear              → remove all
   bot.command("premium", async (ctx) => {
     if (!isOwner(ctx, OWNER_CHAT_ID)) {
       await ctx.reply("❌ ခွင့်မပြုပါ");
@@ -163,7 +161,7 @@ export async function createBot() {
       return;
     }
 
-    // ── remove one (remove / del) ──
+    // ── remove one ──
     if (lower.startsWith("remove ") || lower.startsWith("del ")) {
       const emoji = arg.slice(lower.startsWith("remove ") ? 7 : 4).trim();
       if (!emoji) {
@@ -179,54 +177,45 @@ export async function createBot() {
       return;
     }
 
-    // ── add / update ──
-    if (arg.length > 0) {
-      const parts = arg.split(/\s+/);
-      if (parts.length < 2) {
-        await ctx.reply(
-          "❌ Format မှားနေသည်\n\nဥပမာ: <code>/premium 👛 5368324170671202286</code>",
-          { parse_mode: "HTML" }
-        );
-        return;
+    // ── list ──
+    if (arg.length === 0) {
+      const map = getPremiumEmojiMap();
+      const helpText =
+        `\n\n━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `📌 <b>Commands:</b>\n` +
+        `<code>/premium</code>\n→ အသစ်ထည့်ရန် စတင်မည်\n\n` +
+        `<code>/premium remove 👛</code>\n→ emoji တစ်ခု ဖျက်\n\n` +
+        `<code>/premium clear</code>\n→ mapping အကုန် ဖျက်\n\n` +
+        `💡 Custom emoji ID ရယူရန်:\nBot ဆီ animated emoji တစ်ခု ပို့ပါ → ID အလိုအလျောက် ပြပေးမည်`;
+
+      if (map.size === 0) {
+        await ctx.reply(`⭐ <b>Premium Emoji Manager</b>\n\nMapping မရှိသေးပါ` + helpText, { parse_mode: "HTML" });
+      } else {
+        let listText = `⭐ <b>Premium Emoji Manager</b>\n\n`;
+        for (const [emoji, id] of map.entries()) {
+          listText += `${emoji} → <code>${id}</code>\n`;
+        }
+        listText += helpText;
+        await ctx.reply(listText, { parse_mode: "HTML" });
       }
+
+      // Start the interactive flow
+      ctx.session.premium_emoji_step = "waiting_original_emoji";
+      await ctx.reply("✨ <b>Premium Emoji အသစ်ထည့်ရန်</b>\n\nပြောင်းလဲချင်တဲ့ <b>မူရင်း Emoji</b> ကို ပို့ပေးပါ (ဥပမာ: 🛒)");
+      return;
+    }
+
+    // ── direct add (legacy support) ──
+    const parts = arg.split(/\s+/);
+    if (parts.length >= 2) {
       const emoji = parts[0];
       const id = parts[1];
-      if (!/^\d+$/.test(id)) {
-        await ctx.reply("❌ Emoji ID သည် ဂဏန်းသာ ဖြစ်ရပါမည်", { parse_mode: "HTML" });
+      if (/^\d+$/.test(id)) {
+        await setPremiumEmoji(emoji, id);
+        await ctx.reply(`✅ <b>${emoji}</b> mapping ထည့်ပြီးပါပြီ!`, { parse_mode: "HTML" });
         return;
       }
-      await setPremiumEmoji(emoji, id);
-      await ctx.reply(
-        `✅ <b>Premium Emoji Mapping ထည့်ပြီးပါပြီ!</b>\n\n` +
-        `${emoji} → <code>${id}</code>\n\n` +
-        `💡 Valid custom emoji ID လိုအပ်သည်\n` +
-        `ID ရယူရန် bot ဆီ animated emoji တစ်ခု ပို့ပါ`,
-        { parse_mode: "HTML" }
-      );
-      return;
     }
-
-    // ── list ──
-    const map = getPremiumEmojiMap();
-    const helpText =
-      `\n\n━━━━━━━━━━━━━━━━━━━━━━\n` +
-      `📌 <b>Commands:</b>\n` +
-      `<code>/premium 👛 5368324170671202286</code>\n→ emoji ကို premium ID နဲ့ map လုပ်\n\n` +
-      `<code>/premium remove 👛</code>\n→ emoji တစ်ခု ဖျက်\n\n` +
-      `<code>/premium clear</code>\n→ mapping အကုန် ဖျက်\n\n` +
-      `💡 Custom emoji ID ရယူရန်:\nBot ဆီ animated emoji တစ်ခု ပို့ပါ → ID အလိုအလျောက် ပြပေးမည်`;
-
-    if (map.size === 0) {
-      await ctx.reply(`⭐ <b>Premium Emoji Manager</b>\n\nMapping မရှိသေးပါ` + helpText, { parse_mode: "HTML" });
-      return;
-    }
-
-    let listText = `⭐ <b>Premium Emoji Manager</b>\n\n`;
-    for (const [emoji, id] of map.entries()) {
-      listText += `${emoji} → <code>${id}</code>\n`;
-    }
-    listText += helpText;
-    await ctx.reply(listText, { parse_mode: "HTML" });
   });
 
   // ─── Callback: Service Selection ──────────────────────────
@@ -534,7 +523,49 @@ export async function createBot() {
   bot.on(["message:text", "message:photo"], async (ctx) => {
     const ownerChatId = Number(OWNER_CHAT_ID);
 
+    // ── Premium Emoji flow ──
+    if (isOwner(ctx, OWNER_CHAT_ID) && ctx.session.premium_emoji_step) {
+      const text = ctx.message && "text" in ctx.message ? ctx.message.text?.trim() : "";
+      
+      if (ctx.session.premium_emoji_step === "waiting_original_emoji") {
+        if (!text) return;
+        ctx.session.premium_original_emoji = text;
+        ctx.session.premium_emoji_step = "waiting_premium_emoji";
+        await ctx.reply(
+          `✅ မူရင်း emoji: ${text}\n\n` +
+          `✨ ယခု <b>Premium Emoji</b> (Animated Emoji) ကို ပို့ပေးပါ`
+        );
+        return;
+      }
 
+      if (ctx.session.premium_emoji_step === "waiting_premium_emoji") {
+        const entities = ctx.message?.entities ?? [];
+        let foundId: string | undefined;
+        
+        for (const ent of entities) {
+          if (ent.type === "custom_emoji" && ent.custom_emoji_id) {
+            foundId = ent.custom_emoji_id;
+            break;
+          }
+        }
+
+        if (foundId) {
+          const original = ctx.session.premium_original_emoji!;
+          await setPremiumEmoji(original, foundId);
+          await ctx.reply(
+            `✅ <b>အောင်မြင်ပါသည်!</b>\n\n` +
+            `${original} → <tg-emoji emoji-id="${foundId}">${original}</tg-emoji>\n\n` +
+            `ယခုမှစ၍ Bot တစ်ခုလုံးရှိ ${original} အားလုံးကို Premium Emoji ဖြင့် ပြောင်းလဲပြသမည်ဖြစ်သည် ✨`,
+            { parse_mode: "HTML" }
+          );
+          ctx.session.premium_emoji_step = undefined;
+          ctx.session.premium_original_emoji = undefined;
+        } else {
+          await ctx.reply("❌ Premium Emoji (Animated) ဖြစ်ရပါမည်။ ကျေးဇူးပြု၍ ပြန်ပို့ပေးပါ");
+        }
+        return;
+      }
+    }
 
     // ── Admin text input flow ──
     if (isOwner(ctx, OWNER_CHAT_ID) && ctx.session.adminStep) {
