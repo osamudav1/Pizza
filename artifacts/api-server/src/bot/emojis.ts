@@ -1,34 +1,62 @@
-import { logger } from "../lib/logger";
+import { db } from "./db";
 
-// ရိုးရိုး emoji နဲ့ Premium ID ကို ချိတ်ဆက်ထားတဲ့ Map
-const premiumEmojiMap = new Map<string, string>([
-  ["👛", "5368324170671202286"], // 👛 ကို ဒီ ID နဲ့ ပြောင်းမယ်
-  ["💎", "5431698324170671202"]  // 💎 ကို ဒီ ID နဲ့ ပြောင်းမယ်
-]);
+const DB_PATH = "/settings/premiumEmojiMap";
 
-// Extract full grapheme cluster (emoji) from text at a given position
+async function loadMap(): Promise<Map<string, string>> {
+  try {
+    const raw: Record<string, string> = await db.getData(DB_PATH);
+    return new Map(Object.entries(raw));
+  } catch {
+    return new Map();
+  }
+}
+
+async function saveMap(map: Map<string, string>): Promise<void> {
+  const obj: Record<string, string> = {};
+  for (const [emoji, id] of map.entries()) {
+    obj[emoji] = id;
+  }
+  await db.push(DB_PATH, obj, true);
+}
+
+export async function addPremiumEmojiMapping(emoji: string, id: string): Promise<void> {
+  const map = await loadMap();
+  map.set(emoji, id);
+  await saveMap(map);
+}
+
+export async function deletePremiumEmojiMapping(emoji: string): Promise<boolean> {
+  const map = await loadMap();
+  const existed = map.has(emoji);
+  map.delete(emoji);
+  await saveMap(map);
+  return existed;
+}
+
+export async function getAllPremiumEmojiMappings(): Promise<Map<string, string>> {
+  return loadMap();
+}
+
 export function extractFirstEmoji(text: string): string {
-  // Use Intl.Segmenter if available (Node 16+), fallback to spread
   if (typeof (Intl as any).Segmenter !== "undefined") {
     const segmenter = new (Intl as any).Segmenter(undefined, { granularity: "grapheme" });
     for (const { segment } of segmenter.segment(text)) {
       if (segment.trim()) return segment;
     }
   }
-  // Fallback: spread to handle surrogate pairs
   return [...text].find(c => c.trim() !== "") || "✨";
 }
 
-export function applyPremiumEmojis(text: string): string {
+export async function applyPremiumEmojis(text: string): Promise<string> {
+  const map = await loadMap();
+  if (map.size === 0) return text;
+
   let result = text;
-  
-  // စာသားထဲမှာ ပါသမျှ emoji တွေကို tag နဲ့ လိုက်အစားထိုးတယ်
-  for (const [emoji, id] of premiumEmojiMap.entries()) {
+  for (const [emoji, id] of map.entries()) {
     result = result.replaceAll(
-      emoji, 
+      emoji,
       `<tg-emoji emoji-id="${id}">${emoji}</tg-emoji>`
     );
   }
-  
   return result;
 }

@@ -17,6 +17,9 @@ import {
 import {
   applyPremiumEmojis,
   extractFirstEmoji,
+  addPremiumEmojiMapping,
+  deletePremiumEmojiMapping,
+  getAllPremiumEmojiMappings,
 } from "./emojis";
 import {
   mainMenuKeyboard,
@@ -137,15 +140,84 @@ export function createBot() {
   });
 
   // ─── /premium ─────────────────────────────────────────────
+  // Usage:
+  //   /premium                        → list all mappings
+  //   /premium 🛒 5312361253610475399  → add / update mapping
+  //   /premium del 🛒                  → delete mapping
   bot.command("premium", async (ctx) => {
     if (!isOwner(ctx, OWNER_CHAT_ID)) {
       await ctx.reply("❌ ခွင့်မပြုပါ");
       return;
     }
     const arg = ctx.match?.trim() || "";
-    const parts = arg.split(/\s+/);
 
-    await ctx.reply("⭐ <b>Premium Emoji Manager</b>\n\nPremium Emoji များ အလုပ်လုပ်ရန် code ထဲတွင် သတ်မှတ်ထားပြီး ဖြစ်ပါသည်။", { parse_mode: "HTML" });
+    // ── delete ──
+    if (arg.toLowerCase().startsWith("del ")) {
+      const emoji = arg.slice(4).trim();
+      if (!emoji) {
+        await ctx.reply("❌ ဥပမာ: <code>/premium del 🛒</code>", { parse_mode: "HTML" });
+        return;
+      }
+      const removed = await deletePremiumEmojiMapping(emoji);
+      if (removed) {
+        await ctx.reply(`✅ <b>${emoji}</b> mapping ဖျက်ပြီးပါပြီ`, { parse_mode: "HTML" });
+      } else {
+        await ctx.reply(`⚠️ <b>${emoji}</b> mapping မတွေ့ပါ`, { parse_mode: "HTML" });
+      }
+      return;
+    }
+
+    // ── add / update ──
+    if (arg.length > 0) {
+      // Split on whitespace — first token = emoji, second = numeric ID
+      const parts = arg.split(/\s+/);
+      if (parts.length < 2) {
+        await ctx.reply(
+          "❌ Format မှားနေသည်\n\nဥပမာ: <code>/premium 🛒 5312361253610475399</code>",
+          { parse_mode: "HTML" }
+        );
+        return;
+      }
+      const emoji = parts[0];
+      const id = parts[1];
+      if (!/^\d+$/.test(id)) {
+        await ctx.reply(
+          "❌ Emoji ID သည် ဂဏန်းသာ ဖြစ်ရပါမည်\n\nဥပမာ: <code>/premium 🛒 5312361253610475399</code>",
+          { parse_mode: "HTML" }
+        );
+        return;
+      }
+      await addPremiumEmojiMapping(emoji, id);
+      await ctx.reply(
+        `✅ <b>Premium Emoji Mapping ထည့်ပြီးပါပြီ!</b>\n\n` +
+        `Emoji: ${emoji}\n` +
+        `ID: <code>${id}</code>\n\n` +
+        `ယခုမှ စတင်၍ bot မှ ${emoji} ပါသည့် message များတွင် premium emoji ပြောင်းပေးမည်ဖြစ်သည်`,
+        { parse_mode: "HTML" }
+      );
+      return;
+    }
+
+    // ── list ──
+    const map = await getAllPremiumEmojiMappings();
+    if (map.size === 0) {
+      await ctx.reply(
+        `⭐ <b>Premium Emoji Manager</b>\n\n` +
+        `Mapping မရှိသေးပါ\n\n` +
+        `➕ ထည့်ရန်:\n<code>/premium 🛒 5312361253610475399</code>\n\n` +
+        `🗑 ဖျက်ရန်:\n<code>/premium del 🛒</code>`,
+        { parse_mode: "HTML" }
+      );
+      return;
+    }
+
+    let listText = `⭐ <b>Premium Emoji Mappings</b>\n\n`;
+    for (const [emoji, id] of map.entries()) {
+      listText += `${emoji} → <code>${id}</code>\n`;
+    }
+    listText += `\n➕ ထည့်ရန်: <code>/premium 🛒 5312361253610475399</code>\n`;
+    listText += `🗑 ဖျက်ရန်: <code>/premium del 🛒</code>`;
+    await ctx.reply(listText, { parse_mode: "HTML" });
   });
 
   // ─── Callback: Service Selection ──────────────────────────
