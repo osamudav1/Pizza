@@ -88,13 +88,6 @@ export function createBot() {
       const originalText = p[targetField];
       const replacedText = await applyPremiumEmojis(originalText);
 
-      logger.info({
-        method,
-        hasEmoji: replacedText !== originalText,
-        original: originalText?.slice(0, 80),
-        replaced: replacedText?.slice(0, 80),
-      }, "PremiumEmojiTransformer");
-
       if (replacedText !== originalText) {
         p[targetField] = replacedText;
         p.parse_mode = "HTML";
@@ -146,22 +139,33 @@ export function createBot() {
   });
 
   // ─── /premium ─────────────────────────────────────────────
-  // Usage:
-  //   /premium                        → list all mappings
-  //   /premium 🛒 5312361253610475399  → add / update mapping
-  //   /premium del 🛒                  → delete mapping
+  // /premium                    → list
+  // /premium 👛 <id>            → add/update
+  // /premium remove 👛          → remove one
+  // /premium clear              → remove all
   bot.command("premium", async (ctx) => {
     if (!isOwner(ctx, OWNER_CHAT_ID)) {
       await ctx.reply("❌ ခွင့်မပြုပါ");
       return;
     }
     const arg = ctx.match?.trim() || "";
+    const lower = arg.toLowerCase();
 
-    // ── delete ──
-    if (arg.toLowerCase().startsWith("del ")) {
-      const emoji = arg.slice(4).trim();
+    // ── clear all ──
+    if (lower === "clear") {
+      const map = await getAllPremiumEmojiMappings();
+      for (const emoji of map.keys()) {
+        await deletePremiumEmojiMapping(emoji);
+      }
+      await ctx.reply(`✅ Mapping အကုန် ဖျက်ပြီးပါပြီ (${map.size} ခု)`, { parse_mode: "HTML" });
+      return;
+    }
+
+    // ── remove one (remove / del) ──
+    if (lower.startsWith("remove ") || lower.startsWith("del ")) {
+      const emoji = arg.slice(lower.startsWith("remove ") ? 7 : 4).trim();
       if (!emoji) {
-        await ctx.reply("❌ ဥပမာ: <code>/premium del 🛒</code>", { parse_mode: "HTML" });
+        await ctx.reply("❌ ဥပမာ: <code>/premium remove 🛒</code>", { parse_mode: "HTML" });
         return;
       }
       const removed = await deletePremiumEmojiMapping(emoji);
@@ -175,11 +179,10 @@ export function createBot() {
 
     // ── add / update ──
     if (arg.length > 0) {
-      // Split on whitespace — first token = emoji, second = numeric ID
       const parts = arg.split(/\s+/);
       if (parts.length < 2) {
         await ctx.reply(
-          "❌ Format မှားနေသည်\n\nဥပမာ: <code>/premium 🛒 5312361253610475399</code>",
+          "❌ Format မှားနေသည်\n\nဥပမာ: <code>/premium 🛒 5375347606136315563</code>",
           { parse_mode: "HTML" }
         );
         return;
@@ -188,7 +191,7 @@ export function createBot() {
       const id = parts[1];
       if (!/^\d+$/.test(id)) {
         await ctx.reply(
-          "❌ Emoji ID သည် ဂဏန်းသာ ဖြစ်ရပါမည်\n\nဥပမာ: <code>/premium 🛒 5312361253610475399</code>",
+          "❌ Emoji ID သည် ဂဏန်းသာ ဖြစ်ရပါမည်",
           { parse_mode: "HTML" }
         );
         return;
@@ -196,9 +199,9 @@ export function createBot() {
       await addPremiumEmojiMapping(emoji, id);
       await ctx.reply(
         `✅ <b>Premium Emoji Mapping ထည့်ပြီးပါပြီ!</b>\n\n` +
-        `Emoji: ${emoji}\n` +
-        `ID: <code>${id}</code>\n\n` +
-        `ယခုမှ စတင်၍ bot မှ ${emoji} ပါသည့် message များတွင် premium emoji ပြောင်းပေးမည်ဖြစ်သည်`,
+        `${emoji} → <code>${id}</code>\n\n` +
+        `⚠️ ID မမှန်ရင် Telegram က regular emoji ပြမည်\n` +
+        `Custom emoji ID ရယူရန် animated emoji ပေးပို့ပါ`,
         { parse_mode: "HTML" }
       );
       return;
@@ -206,23 +209,24 @@ export function createBot() {
 
     // ── list ──
     const map = await getAllPremiumEmojiMappings();
+    const helpText =
+      `\n\n━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `📌 <b>Commands:</b>\n` +
+      `<code>/premium 👛 5368324170671202286</code>\n→ emoji ကို premium ID နဲ့ map လုပ်\n\n` +
+      `<code>/premium remove 👛</code>\n→ emoji တစ်ခု ဖျက်\n\n` +
+      `<code>/premium clear</code>\n→ mapping အကုန် ဖျက်\n\n` +
+      `💡 Custom emoji ID ရယူရန်:\nAnimated emoji (custom emoji) တစ်ခု ဒီ bot ဆီ ပို့ပါ → bot က ID ပြပေးမည်`;
+
     if (map.size === 0) {
-      await ctx.reply(
-        `⭐ <b>Premium Emoji Manager</b>\n\n` +
-        `Mapping မရှိသေးပါ\n\n` +
-        `➕ ထည့်ရန်:\n<code>/premium 🛒 5312361253610475399</code>\n\n` +
-        `🗑 ဖျက်ရန်:\n<code>/premium del 🛒</code>`,
-        { parse_mode: "HTML" }
-      );
+      await ctx.reply(`⭐ <b>Premium Emoji Manager</b>\n\nMapping မရှိသေးပါ` + helpText, { parse_mode: "HTML" });
       return;
     }
 
-    let listText = `⭐ <b>Premium Emoji Mappings</b>\n\n`;
+    let listText = `⭐ <b>Premium Emoji Manager</b>\n\n`;
     for (const [emoji, id] of map.entries()) {
       listText += `${emoji} → <code>${id}</code>\n`;
     }
-    listText += `\n➕ ထည့်ရန်: <code>/premium 🛒 5312361253610475399</code>\n`;
-    listText += `🗑 ဖျက်ရန်: <code>/premium del 🛒</code>`;
+    listText += helpText;
     await ctx.reply(listText, { parse_mode: "HTML" });
   });
 
@@ -495,6 +499,36 @@ export function createBot() {
         { parse_mode: "HTML" }
       );
     }
+  });
+
+  // ─── Custom Emoji ID Detector (Owner only) ─────────────────
+  // Owner က animated custom emoji ပို့ရင် ID ကို auto-extract ပြပေးမည်
+  bot.on("message:entities:custom_emoji", async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) return;
+    const entities = ctx.message.entities ?? [];
+    const seen = new Set<string>();
+    const found: Array<{ emoji: string; id: string }> = [];
+
+    const msgText = ctx.message.text || ctx.message.caption || "";
+    for (const ent of entities) {
+      if (ent.type === "custom_emoji" && ent.custom_emoji_id) {
+        const id = ent.custom_emoji_id;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        const emoji = [...msgText].slice(ent.offset, ent.offset + ent.length).join("");
+        found.push({ emoji, id });
+      }
+    }
+
+    if (found.length === 0) return;
+
+    let reply = `🎯 <b>Custom Emoji IDs တွေ့ပါပြီ!</b>\n\n`;
+    for (const { emoji, id } of found) {
+      reply += `${emoji} → <code>${id}</code>\n`;
+      reply += `/premium ${emoji} ${id}\n\n`;
+    }
+    reply += `⬆️ Command ကို tap/copy လုပ်ပြီး ပေးပို့ပါ`;
+    await ctx.reply(reply, { parse_mode: "HTML" });
   });
 
   // ─── Message Handler ───────────────────────────────────────
