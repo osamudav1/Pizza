@@ -20,6 +20,7 @@ import {
   setPremiumEmojiMapping,
   removePremiumEmojiMapping,
   getPremiumEmojiMap,
+  extractFirstEmoji,
 } from "./emojis";
 import {
   mainMenuKeyboard,
@@ -223,6 +224,24 @@ export function createBot() {
       return;
     }
 
+    // /premium test <text>  → test replacement on given text
+    if (parts[0] === "test") {
+      const testInput = parts.slice(1).join(" ") || "💎✨⭐🎮";
+      const testOutput = await applyPremiumEmojis(testInput);
+      const changed = testOutput !== testInput;
+      await ctx.reply(
+        `🧪 <b>Premium Emoji Test</b>\n\n` +
+        `Input: ${escHtml(testInput)}\n` +
+        `Status: ${changed ? "✅ Replaced!" : "❌ NOT replaced (map empty or no match)"}\n\n` +
+        (changed ? `Raw HTML:\n<code>${escHtml(testOutput)}</code>\n\n👇 Rendered:` : `<i>Map လုပ်ရန်: /premium [emoji] [ID]</i>`),
+        { parse_mode: "HTML" }
+      );
+      if (changed) {
+        await ctx.reply(testOutput, { parse_mode: "HTML" });
+      }
+      return;
+    }
+
     // /premium debug  → full diagnostic of emoji map + replacement test
     if (parts[0] === "debug") {
       const info = await debugPremiumEmojis();
@@ -292,14 +311,24 @@ export function createBot() {
         `━━━━━━━━━━━━━━━━━━━━━━\n` +
         currentText +
         `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `💡 <b>Auto-detect:</b> Premium emoji တစ်ခုကို ယခု ဒီ chat ထဲ send လုပ်ပါ\n` +
+        `💡 <b>Auto-detect (Telegram Premium လိုအပ်):</b>\n` +
+        `Premium custom emoji တစ်ခုကို ယခု ဒီ chat ထဲ send လုပ်ပါ\n` +
         `Bot က ID ကို auto map လုပ်ပေးမည်\n\n` +
+        `📌 <b>Manual Method (Premium မလိုပါ):</b>\n` +
+        `1. Premium emoji ပါသော message ကို forward လုပ်ပါ\n` +
+        `   (Group/Channel မှ forward → bot auto-detect)\n` +
+        `2. သို့မဟုတ် ID သိလျှင်:\n` +
+        `   <code>/premium 💎 5368324170819986680</code>\n\n` +
         `📌 <b>Commands:</b>\n` +
-        `<code>/premium 🧾 &lt;ID&gt;</code> — manual map\n` +
-        `<code>/premium remove 🧾</code> — တစ်ခု ဖျက်\n` +
+        `<code>/premium [emoji] [ID]</code> — manual map\n` +
+        `<code>/premium test [emoji]</code> — စစ်ဆေး\n` +
+        `<code>/premium remove [emoji]</code> — ဖျက်\n` +
         `<code>/premium clear</code> — အကုန် ဖျက်\n` +
-        `<code>/premium emojis</code> — bot emoji list\n` +
-        `<code>/premium debug</code> — စစ်ဆေး`,
+        `<code>/premium list</code> — mapping list\n` +
+        `<code>/premium debug</code> — full diagnostic\n\n` +
+        `💎 <b>Emoji ID ရှာနည်း:</b>\n` +
+        `@Stickers bot → emoji sticker pack → ID copy\n` +
+        `သို့မဟုတ် @RawDataBot → message forward → custom_emoji_id`,
       { parse_mode: "HTML" }
     );
     ctx.session.step = "waiting_premium_emoji";
@@ -317,13 +346,26 @@ export function createBot() {
     if (svc.photo || svc.caption) {
       try { await ctx.deleteMessage(); } catch {}
       if (svc.photo) {
+        // If caption looks like plain text (no HTML tags), HTML-escape it so
+        // that special chars (&, <, >) don't break parse_mode:HTML, while
+        // still allowing the premium emoji transformer to inject <tg-emoji> tags.
+        const rawCap = svc.caption || escHtml(svc.name);
+        const captionHtml = rawCap.includes("<") ? rawCap : rawCap
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
         await ctx.replyWithPhoto(svc.photo, {
-          caption: svc.caption || escHtml(svc.name),
+          caption: captionHtml,
           parse_mode: "HTML",
           reply_markup: servicePageKeyboard(svc),
         });
       } else {
-        await ctx.reply(svc.caption!, {
+        const rawCap = svc.caption!;
+        const captionHtml = rawCap.includes("<") ? rawCap : rawCap
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+        await ctx.reply(captionHtml, {
           parse_mode: "HTML",
           reply_markup: servicePageKeyboard(svc),
         });
@@ -574,7 +616,7 @@ export function createBot() {
       if (customEmojiEntity && (customEmojiEntity as any).custom_emoji_id) {
         const emojiId = (customEmojiEntity as any).custom_emoji_id;
         const msgText = ctx.message && "text" in ctx.message ? ctx.message.text || "" : "";
-        const emojiChar = [...msgText].find(c => c !== " ") || "✨";
+        const emojiChar = extractFirstEmoji(msgText);
         await setPremiumEmojiMapping(emojiChar, emojiId);
         await ctx.reply(
           `✅ <b>${bs("Premium Emoji")} သတ်မှတ်ပြီးပါပြီ!</b>\n\n` +
