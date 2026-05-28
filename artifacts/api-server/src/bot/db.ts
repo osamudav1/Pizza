@@ -116,10 +116,42 @@ ensureDefaults().catch(console.error);
 
 export const db = {
   getData: async (path: string) => {
-    return {}; 
+    if (path === "/settings/premiumEmojiMap") {
+      const docs = await PremiumEmojiModel.find().lean();
+      const map: Record<string, string> = {};
+      docs.forEach(d => { map[d.emoji] = d.emojiId; });
+      return map;
+    }
+    // For session storage path: /sessions/USER_ID
+    if (path.startsWith("/sessions/")) {
+      const userIdStr = path.split("/").pop();
+      if (userIdStr) {
+        const userId = parseInt(userIdStr);
+        if (!isNaN(userId)) {
+          const order = await OrderModel.findOne({ userId }).sort({ createdAt: -1 }).lean();
+          return order ? { pendingOrderId: order.orderId } : {};
+        }
+      }
+    }
+    return {};
   },
-  push: async (path: string, data: any, override: boolean) => {},
-  delete: async (path: string) => {},
+  push: async (path: string, data: any, override: boolean) => {
+    if (path === "/settings/premiumEmojiMap") {
+      // data is Record<string, string>
+      for (const [emoji, emojiId] of Object.entries(data as Record<string, string>)) {
+        await PremiumEmojiModel.findOneAndUpdate(
+          { emoji },
+          { emoji, emojiId },
+          { upsert: true }
+        );
+      }
+    }
+  },
+  delete: async (path: string) => {
+    if (path === "/settings/premiumEmojiMap") {
+      await PremiumEmojiModel.deleteMany({});
+    }
+  },
 };
 
 export async function getServices(): Promise<Service[]> {

@@ -56,8 +56,8 @@ export interface IOrder extends Document {
 }
 
 const OrderSchema: Schema = new Schema({
-  orderId: { type: String, required: true, unique: true },
-  userId: { type: Number, required: true },
+  orderId: { type: String, required: true, unique: true, index: true },
+  userId: { type: Number, required: true, index: true },
   username: { type: String },
   firstName: { type: String },
   serviceId: { type: String, required: true },

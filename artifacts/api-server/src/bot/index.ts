@@ -117,15 +117,20 @@ export async function createBot() {
   bot.command("start", async (ctx) => {
     if (ctx.chat.type !== "private") return;
     ctx.session = {};
-    const services = await getServices();
-    const welcome = await getWelcomeMedia();
+    
+    // Optimize: Fetch services and welcome media in parallel
+    const [services, welcome] = await Promise.all([
+      getServices(),
+      getWelcomeMedia()
+    ]);
+
     const defaultCaption = `✨ <b>မင်္ဂလာပါ 🍕 ${bs("Mg Pizza Store")} မှ ကြိုဆိုပါသည်!</b>\n\n` +
       `👤 ${bs("Owner")} သို့ဆက်သွယ်ရန်: <a href="https://t.me/Mg_Piizzaa">@Mg_Piizzaa</a>\n\n` +
       `🛒 ${bs("Service")} များဝယ်ယူရန် တစ်ခုရွေးချယ်ပါ ⬇️`;
     
     let caption = welcome?.caption || defaultCaption;
     
-    // Welcome caption formatting: replace {mention} with user mention
+    // Welcome caption formatting
     if (caption.includes("{mention}")) {
       const mention = ctx.from?.username ? `@${ctx.from.username}` : `<a href="tg://user?id=${ctx.from?.id}">${ctx.from?.first_name}</a>`;
       caption = caption.replace(/{mention}/g, mention);
@@ -137,17 +142,18 @@ export async function createBot() {
       caption = caption.replace(/{id}/g, ctx.from?.id.toString() || "");
     }
 
+    const replyOptions = {
+      parse_mode: "HTML" as const,
+      reply_markup: mainMenuKeyboard(services),
+    };
+
     if (welcome?.photo) {
       await ctx.replyWithPhoto(welcome.photo, {
+        ...replyOptions,
         caption,
-        parse_mode: "HTML",
-        reply_markup: mainMenuKeyboard(services),
       });
     } else {
-      await ctx.reply(caption, {
-        parse_mode: "HTML",
-        reply_markup: mainMenuKeyboard(services),
-      });
+      await ctx.reply(caption, replyOptions);
     }
   });
 
