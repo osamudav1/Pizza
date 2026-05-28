@@ -115,6 +115,7 @@ export async function createBot() {
 
   // ─── /start ───────────────────────────────────────────────
   bot.command("start", async (ctx) => {
+    if (ctx.chat.type !== "private") return;
     ctx.session = {};
     const services = await getServices();
     const welcome = await getWelcomeMedia();
@@ -152,6 +153,7 @@ export async function createBot() {
 
   // ─── /menu ────────────────────────────────────────────────
   bot.command("menu", async (ctx) => {
+    if (ctx.chat.type !== "private") return;
     ctx.session = {};
     const services = await getServices();
     await ctx.reply(
@@ -162,6 +164,7 @@ export async function createBot() {
 
   // ─── /admin ───────────────────────────────────────────────
   bot.command("admin", async (ctx) => {
+    if (ctx.chat.type !== "private") return;
     if (!isOwner(ctx, OWNER_CHAT_ID)) {
       await ctx.reply("❌ ခွင့်မပြုပါ");
       return;
@@ -541,6 +544,15 @@ export async function createBot() {
   // ─── Message Handler ───────────────────────────────────────
   bot.on(["message:text", "message:photo"], async (ctx) => {
     const ownerChatId = Number(OWNER_CHAT_ID);
+    const isGroup = ctx.chat.type === "group" || ctx.chat.type === "supergroup";
+
+    // If in group, only allow specific logic (like receipt slip if needed)
+    // and ignore all other interactive flows to avoid bot chatting in groups.
+    if (isGroup) {
+      // If you have specific group logic, put it here.
+      // Otherwise, just return to stop the bot from replying to group messages.
+      return;
+    }
 
     // ── Premium Emoji flow ──
     if (isOwner(ctx, OWNER_CHAT_ID) && ctx.session.premium_emoji_step) {
