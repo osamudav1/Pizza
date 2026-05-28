@@ -10,6 +10,8 @@ import {
   addService,
   updateService,
   deleteService,
+  getWelcomeMedia,
+  setWelcomeMedia,
   type Order,
   type Service,
   type ServiceItem,
@@ -64,6 +66,7 @@ interface SessionData {
   collectedPlayerId?: string;
   premium_emoji_step?: string;
   premium_original_emoji?: string;
+  welcome_media_step?: string;
 }
 
 type MyContext = Context & SessionFlavor<SessionData>;
@@ -114,12 +117,25 @@ export async function createBot() {
   bot.command("start", async (ctx) => {
     ctx.session = {};
     const services = await getServices();
-    await ctx.reply(
-      `✨ <b>မင်္ဂလာပါ 🍕 ${bs("Mg Pizza Store")} မှ ကြိုဆိုပါသည်!</b>\n\n` +
-        `👤 ${bs("Owner")} သို့ဆက်သွယ်ရန်: <a href="https://t.me/Mg_Piizzaa">@Mg_Piizzaa</a>\n\n` +
-        `🛒 ${bs("Service")} များဝယ်ယူရန် တစ်ခုရွေးချယ်ပါ ⬇️`,
-      { parse_mode: "HTML", reply_markup: mainMenuKeyboard(services) }
-    );
+    const welcome = await getWelcomeMedia();
+    const defaultCaption = `✨ <b>မင်္ဂလာပါ 🍕 ${bs("Mg Pizza Store")} မှ ကြိုဆိုပါသည်!</b>\n\n` +
+      `👤 ${bs("Owner")} သို့ဆက်သွယ်ရန်: <a href="https://t.me/Mg_Piizzaa">@Mg_Piizzaa</a>\n\n` +
+      `🛒 ${bs("Service")} များဝယ်ယူရန် တစ်ခုရွေးချယ်ပါ ⬇️`;
+    
+    const caption = welcome?.caption || defaultCaption;
+
+    if (welcome?.photo) {
+      await ctx.replyWithPhoto(welcome.photo, {
+        caption,
+        parse_mode: "HTML",
+        reply_markup: mainMenuKeyboard(services),
+      });
+    } else {
+      await ctx.reply(caption, {
+        parse_mode: "HTML",
+        reply_markup: mainMenuKeyboard(services),
+      });
+    }
   });
 
   // ─── /menu ────────────────────────────────────────────────
@@ -462,20 +478,12 @@ export async function createBot() {
 
     try { await ctx.deleteMessage(); } catch {}
 
-    if (targetType === "uc") {
-      ctx.session.step = "v2_waiting_player_id";
+    if (targetType === "uc" || targetType === "dia") {
+      ctx.session.step = "v2_waiting_amount";
       await ctx.reply(
-        `🎮 <b>${escHtml(svc.name)}</b>\n\n` +
+        `${targetType === "uc" ? "🎮" : "💎"} <b>${escHtml(svc.name)}</b>\n\n` +
         kpayInfo + `\n\n` +
-        `📋 <b>${bs("Player ID")} (Character ID)</b> ရိုက်ထည့်ပါ:\n<i>ဥပမာ: 5123456789</i>`,
-        { parse_mode: "HTML" }
-      );
-    } else if (targetType === "dia") {
-      ctx.session.step = "v2_waiting_player_id";
-      await ctx.reply(
-        `💎 <b>${escHtml(svc.name)}</b>\n\n` +
-        kpayInfo + `\n\n` +
-        `📋 <b>${bs("Player ID")}</b> ရိုက်ထည့်ပါ:`,
+        `💰 ဝယ်ယူမည့် <b>${bs("Amount")}</b> ကို ရိုက်ထည့်ပါ:\n<i>ဥပမာ: 1000</i>`,
         { parse_mode: "HTML" }
       );
     } else {
@@ -570,6 +578,58 @@ export async function createBot() {
     // ── Admin text input flow ──
     if (isOwner(ctx, OWNER_CHAT_ID) && ctx.session.adminStep) {
       await handleAdminInput(ctx);
+      return;
+    }
+
+    // ── Welcome Media flow ──
+    if (isOwner(ctx, OWNER_CHAT_ID) && ctx.session.welcome_media_step) {
+      if (ctx.session.welcome_media_step === "waiting_photo") {
+        if (ctx.message && "photo" in ctx.message && ctx.message.photo) {
+          const photos = ctx.message.photo;
+          const fileId = photos[photos.length - 1].file_id;
+          await setWelcomeMedia({ photo: fileId });
+          ctx.session.welcome_media_step = "waiting_caption";
+          await ctx.reply(
+            `✅ Photo သိမ်းပြီးပါပြီ!\n\n` +
+            `📝 <b>Welcome Caption</b> ရိုက်ပါ (HTML OK)\n<i>သို့မဟုတ် ကျော်ပါ</i>`,
+            { parse_mode: "HTML", reply_markup: adminSkipCaptionKeyboard() }
+          );
+        } else {
+          await ctx.reply("❌ ဓာတ်ပုံ ပေးပို့ပါ သို့မဟုတ် ကျော်ပါ");
+        }
+        return;
+      }
+
+      if (ctx.session.welcome_media_step === "waiting_caption") {
+        const text = ctx.message && "text" in ctx.message ? ctx.message.text?.trim() : "";
+        if (text) {
+          await setWelcomeMedia({ caption: text });
+          ctx.session.welcome_media_step = undefined;
+          await ctx.reply(`✅ Welcome Media အားလုံး ပြင်ဆင်ပြီးပါပြီ ✨`, { reply_markup: adminMenuKeyboard() });
+        } else {
+          await ctx.reply("❌ စာသား ရိုက်ပါ သို့မဟုတ် ကျော်ပါ");
+        }
+        return;
+      }
+    }
+
+    // ── User flow: v2 — waiting Amount (UC or Diamonds) ──
+    if (ctx.session.step === "v2_waiting_amount" && ctx.session.pendingOrderId) {
+      const text = ctx.message && "text" in ctx.message ? ctx.message.text?.trim() : "";
+      if (!text) return;
+      
+      await updateOrder(ctx.session.pendingOrderId, { quantity: text });
+      ctx.session.step = "v2_waiting_player_id";
+      
+      const order = await getOrder(ctx.session.pendingOrderId);
+      const svc = (await getServices()).find((s) => s.id === order?.serviceId);
+      const targetType = svc?.targetType || (svc?.id === "dia" ? "dia" : "uc");
+
+      await ctx.reply(
+        `✅ Amount: <b>${escHtml(text)}</b>\n\n` +
+        `📋 <b>${bs("Player ID")}</b> ${targetType === "uc" ? "(Character ID) " : ""}ရိုက်ထည့်ပါ:`,
+        { parse_mode: "HTML" }
+      );
       return;
     }
 
@@ -977,6 +1037,18 @@ export async function createBot() {
     }
   });
 
+  // ─── Admin: Welcome Media ──────────────────────────────────
+  bot.callbackQuery("admin:welcome_media", async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    await ctx.answerCallbackQuery();
+    ctx.session.welcome_media_step = "waiting_photo";
+    await ctx.reply(
+      `🖼️ <b>Welcome Photo ပြင်မည်</b>\n\n` +
+      `📸 ဓာတ်ပုံအသစ် ပေးပို့ပါ\n<i>သို့မဟုတ် စာသားပဲသုံးလိုပါက ကျော်ပါ</i>`,
+      { parse_mode: "HTML", reply_markup: adminSkipPhotoKeyboard() }
+    );
+  });
+
   // ─── Admin: Service Manage Menu ────────────────────────────
   bot.callbackQuery(/^admin:svc:(.+)$/, async (ctx) => {
     if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
@@ -1292,6 +1364,16 @@ export async function createBot() {
   bot.callbackQuery("admin:skip_photo", async (ctx) => {
     if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
     await ctx.answerCallbackQuery();
+
+    if (ctx.session.welcome_media_step === "waiting_photo") {
+      ctx.session.welcome_media_step = "waiting_caption";
+      await ctx.editMessageText(
+        `📝 <b>Welcome Caption</b> ရိုက်ပါ (HTML OK)\n<i>သို့မဟုတ် ကျော်ပါ</i>`,
+        { parse_mode: "HTML", reply_markup: adminSkipCaptionKeyboard() }
+      );
+      return;
+    }
+
     const isNewSvc = ctx.session.adminStep === "add_svc_photo";
     ctx.session.adminStep = isNewSvc ? "add_svc_caption" : "svc_caption";
     try {
@@ -1311,6 +1393,13 @@ export async function createBot() {
   bot.callbackQuery("admin:skip_caption", async (ctx) => {
     if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
     await ctx.answerCallbackQuery();
+
+    if (ctx.session.welcome_media_step === "waiting_caption") {
+      ctx.session.welcome_media_step = undefined;
+      await ctx.editMessageText(`✅ Welcome Media ပြင်ဆင်မှု ပြီးဆုံးပါပြီ ✨`, { reply_markup: adminMenuKeyboard() });
+      return;
+    }
+
     const isNewSvc = ctx.session.adminStep === "add_svc_caption";
     if (isNewSvc) {
       // Save new service without caption

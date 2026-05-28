@@ -215,6 +215,23 @@ export async function setPremiumEmoji(emojiId: string): Promise<void> {
   await db.push("/settings/premiumEmoji", emojiId, true);
 }
 
+export async function getWelcomeMedia(): Promise<{ photo?: string; caption?: string } | null> {
+  try {
+    return await db.getData("/settings/welcome");
+  } catch {
+    return null;
+  }
+}
+
+export async function setWelcomeMedia(updates: { photo?: string; caption?: string }): Promise<void> {
+  try {
+    const current = await getWelcomeMedia() || {};
+    await db.push("/settings/welcome", { ...current, ...updates }, true);
+  } catch {
+    await db.push("/settings/welcome", updates, true);
+  }
+}
+
 export async function getPremiumEmojiTag(fallback = "⭐"): Promise<string> {
   const id = await getPremiumEmoji();
   if (!id) return fallback;

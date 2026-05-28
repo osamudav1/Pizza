@@ -117,6 +117,7 @@ export function adminMenuKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
     .add(btn(`📋 Service List ကြည့်`, "admin:list", "primary")).row()
     .add(btn(`➕ Service အသစ်ထည့်`, "admin:add", "success")).row()
+    .add(btn(`🖼️ Welcome Photo/Caption ပြင်`, "admin:welcome_media", "primary")).row()
     .add(btn(`⚙️ Service စီမံ / ပြင် / ဖျက်`, "admin:svcs")).row();
 }
 
