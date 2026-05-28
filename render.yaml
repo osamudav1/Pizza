@@ -21,3 +21,12 @@ services:
         sync: false
       - key: GROUP_CHAT_ID
         sync: false
+      - key: MONGO_URI
+        fromDatabase:
+          name: pizza-db
+          property: connectionString
+
+databases:
+  - name: pizza-db
+    plan: free
+    region: singapore

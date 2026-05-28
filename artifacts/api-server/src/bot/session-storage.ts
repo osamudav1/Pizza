@@ -14,7 +14,8 @@ export class JsonDbSessionStorage<T> implements StorageAdapter<T> {
 
   async read(key: string): Promise<T | undefined> {
     try {
-      return await db.getData(this.key(key));
+      const data = await db.getData(this.key(key));
+      return data as T;
     } catch {
       return undefined;
     }

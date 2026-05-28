@@ -114,6 +114,14 @@ async function ensureDefaults() {
 
 ensureDefaults().catch(console.error);
 
+export const db = {
+  getData: async (path: string) => {
+    return {}; 
+  },
+  push: async (path: string, data: any, override: boolean) => {},
+  delete: async (path: string) => {},
+};
+
 export async function getServices(): Promise<Service[]> {
   await connectDB();
   const docs = await ServiceModel.find().lean();
