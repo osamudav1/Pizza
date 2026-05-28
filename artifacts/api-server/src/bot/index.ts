@@ -546,11 +546,8 @@ export async function createBot() {
     const ownerChatId = Number(OWNER_CHAT_ID);
     const isGroup = ctx.chat.type === "group" || ctx.chat.type === "supergroup";
 
-    // If in group, only allow specific logic (like receipt slip if needed)
-    // and ignore all other interactive flows to avoid bot chatting in groups.
+    // If in group, ignore all messages to avoid bot chatting in groups.
     if (isGroup) {
-      // If you have specific group logic, put it here.
-      // Otherwise, just return to stop the bot from replying to group messages.
       return;
     }
 
@@ -839,8 +836,8 @@ export async function createBot() {
       return;
     }
 
-    // Default: show menu
-    if (!isOwner(ctx, OWNER_CHAT_ID)) {
+    // Default: show menu (only in private chats)
+    if (ctx.chat.type === "private" && !isOwner(ctx, OWNER_CHAT_ID)) {
       const services = await getServices();
       await ctx.reply(
         `🛒 <b>${bs("Service Menu")}</b>\n\nဝယ်ယူလိုသော ${bs("service")} ကိုနှိပ်ပါ ⬇️`,
