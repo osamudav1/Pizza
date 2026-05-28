@@ -132,13 +132,22 @@ export function adminServicesKeyboard(services: Service[]): InlineKeyboard {
 }
 
 export function adminServiceManageKeyboard(svc: Service): InlineKeyboard {
+  const orgCount = svc.orgPrices ? Object.keys(svc.orgPrices).length : 0;
   return new InlineKeyboard()
     .add(btn(`✏️ Service Name ပြင်`, `admin:name:${svc.id}`)).row()
     .add(btn(`📸 Photo + Caption ထည့်/ပြင်`, `admin:svc_media:${svc.id}`, "primary")).row()
     .add(btn(`🎯 Target Type ပြင်`, `admin:svc_target:${svc.id}`)).row()
     .add(btn(`📦 Items စီမံ (ထည့် / ပြင် / ဖျက်)`, `admin:items:${svc.id}`)).row()
+    .add(btn(`💰 Org Price${orgCount > 0 ? ` (${orgCount})` : ""} သတ်မှတ်`, `admin:orgprice:${svc.id}`, "success")).row()
     .add(btn(`🗑️ Service ဖျက်`, `admin:del:${svc.id}`, "danger")).row()
     .add(btn(`🔙 Services`, "admin:svcs")).row();
+}
+
+export function adminOrgPriceKeyboard(svcId: string): InlineKeyboard {
+  return new InlineKeyboard()
+    .add(btn(`➕ Price ထည့်`, `admin:orgprice_add:${svcId}`, "success")).row()
+    .add(btn(`🗑️ Price အကုန် ဖျက်`, `admin:orgprice_clear:${svcId}`, "danger")).row()
+    .add(btn(`🔙 Service`, `admin:svc:${svcId}`)).row();
 }
 
 // Target type keyboard for editing existing service

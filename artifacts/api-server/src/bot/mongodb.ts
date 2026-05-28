@@ -10,6 +10,7 @@ export interface IService extends Document {
   photo?: string;
   caption?: string;
   targetType?: string;
+  orgPrices?: Record<string, number>;
   items: {
     id: string;
     label: string;
@@ -26,6 +27,7 @@ const ServiceSchema: Schema = new Schema({
   photo: { type: String },
   caption: { type: String },
   targetType: { type: String },
+  orgPrices: { type: Schema.Types.Mixed, default: {} },
   items: [{
     id: { type: String, required: true },
     label: { type: String, required: true },

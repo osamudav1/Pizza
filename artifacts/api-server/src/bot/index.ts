@@ -10,6 +10,8 @@ import {
   addService,
   updateService,
   deleteService,
+  addOrgPrice,
+  clearOrgPrices,
   getWelcomeMedia,
   setWelcomeMedia,
   type Order,
@@ -43,6 +45,7 @@ import {
   adminNewSvcTargetKeyboard,
   adminSkipPhotoKeyboard,
   adminSkipCaptionKeyboard,
+  adminOrgPriceKeyboard,
   mgServiceButton,
   contactOwnerKeyboard,
 } from "./keyboards";
@@ -658,16 +661,25 @@ export async function createBot() {
     if (ctx.session.step === "v2_waiting_amount" && ctx.session.pendingOrderId) {
       const text = ctx.message && "text" in ctx.message ? ctx.message.text?.trim() : "";
       if (!text) return;
-      
-      await updateOrder(ctx.session.pendingOrderId, { quantity: text });
-      ctx.session.step = "v2_waiting_player_id";
-      
+
       const order = await getOrder(ctx.session.pendingOrderId);
       const svc = (await getServices()).find((s) => s.id === order?.serviceId);
       const targetType = svc?.targetType || (svc?.id === "dia" ? "dia" : "uc");
 
+      // ── Org Price lookup ──
+      const normalizedAmt = text.replace(/[,\s]/g, "");
+      const orgPrice = svc?.orgPrices?.[normalizedAmt];
+      const updates: any = { quantity: text };
+      if (orgPrice !== undefined) updates.itemPrice = orgPrice;
+      await updateOrder(ctx.session.pendingOrderId, updates);
+      ctx.session.step = "v2_waiting_player_id";
+
+      const priceText = orgPrice !== undefined
+        ? `\n💰 ကျသင့်ငွေ: <b>${orgPrice.toLocaleString()} ks</b>`
+        : "";
+
       await ctx.reply(
-        `✅ Amount: <b>${escHtml(text)}</b>\n\n` +
+        `✅ Amount: <b>${escHtml(text)}</b>${priceText}\n\n` +
         `📋 <b>${bs("Player ID")}</b> ${targetType === "uc" ? "(Character ID) " : ""}ရိုက်ထည့်ပါ:`,
         { parse_mode: "HTML" }
       );
@@ -1406,6 +1418,68 @@ export async function createBot() {
     }
   });
 
+  // ─── Admin: Org Price View/Manage ──────────────────────────
+  bot.callbackQuery(/^admin:orgprice:(.+)$/, async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    const svcId = ctx.match[1];
+    await ctx.answerCallbackQuery();
+    const services = await getServices();
+    const svc = services.find((s) => s.id === svcId);
+    if (!svc) return;
+    const orgPrices = svc.orgPrices || {};
+    const entries = Object.entries(orgPrices).sort((a, b) => Number(a[0]) - Number(b[0]));
+    let text = `💰 <b>${escHtml(svc.name)} — Org Price</b>\n━━━━━━━━━━━━━━━━\n`;
+    if (entries.length === 0) {
+      text += `<i>Price မသတ်မှတ်ရသေးပါ</i>\n\n`;
+      text += `Format: <code>amount:price</code>\nဥပမာ: <code>2000:35000</code>`;
+    } else {
+      for (const [amt, pr] of entries) {
+        text += `• ${Number(amt).toLocaleString()} → <b>${pr.toLocaleString()} ks</b>\n`;
+      }
+    }
+    try {
+      await ctx.editMessageText(text, { parse_mode: "HTML", reply_markup: adminOrgPriceKeyboard(svcId) });
+    } catch {
+      await ctx.reply(text, { parse_mode: "HTML", reply_markup: adminOrgPriceKeyboard(svcId) });
+    }
+  });
+
+  // ─── Admin: Org Price Add (prompt) ─────────────────────────
+  bot.callbackQuery(/^admin:orgprice_add:(.+)$/, async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    const svcId = ctx.match[1];
+    await ctx.answerCallbackQuery();
+    ctx.session.adminStep = "orgprice_add";
+    ctx.session.editServiceId = svcId;
+    try {
+      await ctx.editMessageText(
+        `➕ <b>Org Price ထည့်ရန်</b>\n\nFormat: <code>amount:price</code>\nဥပမာ: <code>2000:35000</code>\n\n<i>amount ထည့်ရင် ကျသင့်ငွေ price (ks) ပါ</i>`,
+        { parse_mode: "HTML" }
+      );
+    } catch {
+      await ctx.reply(
+        `➕ <b>Org Price ထည့်ရန်</b>\n\nFormat: <code>amount:price</code>\nဥပမာ: <code>2000:35000</code>`,
+        { parse_mode: "HTML" }
+      );
+    }
+  });
+
+  // ─── Admin: Org Price Clear All ─────────────────────────────
+  bot.callbackQuery(/^admin:orgprice_clear:(.+)$/, async (ctx) => {
+    if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
+    const svcId = ctx.match[1];
+    await clearOrgPrices(svcId);
+    await ctx.answerCallbackQuery("✅ ဖျက်ပြီးပါပြီ");
+    const services = await getServices();
+    const svc = services.find((s) => s.id === svcId);
+    const text = `💰 <b>${escHtml(svc?.name || svcId)} — Org Price</b>\n━━━━━━━━━━━━━━━━\n<i>Price အကုန် ဖျက်ပြီးပါပြီ</i>`;
+    try {
+      await ctx.editMessageText(text, { parse_mode: "HTML", reply_markup: adminOrgPriceKeyboard(svcId) });
+    } catch {
+      await ctx.reply(text, { parse_mode: "HTML", reply_markup: adminOrgPriceKeyboard(svcId) });
+    }
+  });
+
   // ─── Admin: Skip Photo ─────────────────────────────────────
   bot.callbackQuery("admin:skip_photo", async (ctx) => {
     if (!isOwner(ctx, OWNER_CHAT_ID)) { await ctx.answerCallbackQuery("❌"); return; }
@@ -1727,6 +1801,33 @@ export async function createBot() {
           { parse_mode: "HTML", reply_markup: adminServiceItemsKeyboard(updatedSvc) }
         );
       }
+
+    // ── Org Price add ──
+    } else if (step === "orgprice_add") {
+      const svcId = ctx.session.editServiceId!;
+      const match = text.match(/^(\d[\d,]*)\s*[:|]\s*(\d[\d,]*)$/);
+      if (!match) {
+        await ctx.reply(
+          `❌ Format မှား\n\nFormat: <code>amount:price</code>\nဥပမာ: <code>2000:35000</code>`,
+          { parse_mode: "HTML" }
+        );
+        return;
+      }
+      const amount = match[1].replace(/,/g, "");
+      const price = parseInt(match[2].replace(/,/g, ""), 10);
+      await addOrgPrice(svcId, amount, price);
+      // Refresh and show updated table
+      const services = await getServices();
+      const svc = services.find((s) => s.id === svcId);
+      const orgPrices = svc?.orgPrices || {};
+      const entries = Object.entries(orgPrices).sort((a, b) => Number(a[0]) - Number(b[0]));
+      let priceList = `💰 <b>${escHtml(svc?.name || svcId)} — Org Price</b>\n━━━━━━━━━━━━━━━━\n`;
+      for (const [amt, pr] of entries) {
+        priceList += `• ${Number(amt).toLocaleString()} → <b>${pr.toLocaleString()} ks</b>\n`;
+      }
+      priceList += `\nFormat: <code>amount:price</code> — ဆက်ထည့်နိုင်သည်`;
+      await ctx.reply(priceList, { parse_mode: "HTML", reply_markup: adminOrgPriceKeyboard(svcId) });
+      // Keep step so admin can keep adding more
     }
   }
 

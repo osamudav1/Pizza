@@ -8,6 +8,7 @@ export interface Service {
   photo?: string;
   caption?: string;
   targetType?: string;
+  orgPrices?: Record<string, number>;
   items: ServiceItem[];
 }
 
@@ -187,6 +188,7 @@ export async function getServices(): Promise<Service[]> {
     photo: d.photo,
     caption: d.caption,
     targetType: d.targetType,
+    orgPrices: d.orgPrices as Record<string, number> | undefined,
     items: d.items.map(i => ({
       id: i.id,
       label: i.label,
@@ -234,6 +236,24 @@ export async function updateService(serviceId: string, updates: Partial<Service>
 export async function deleteService(serviceId: string): Promise<void> {
   await connectDB();
   await ServiceModel.findOneAndDelete({ id: serviceId });
+  invalidateServicesCache();
+}
+
+export async function addOrgPrice(serviceId: string, amount: string, price: number): Promise<void> {
+  await connectDB();
+  await ServiceModel.findOneAndUpdate(
+    { id: serviceId },
+    { $set: { [`orgPrices.${amount}`]: price } }
+  );
+  invalidateServicesCache();
+}
+
+export async function clearOrgPrices(serviceId: string): Promise<void> {
+  await connectDB();
+  await ServiceModel.findOneAndUpdate(
+    { id: serviceId },
+    { $set: { orgPrices: {} } }
+  );
   invalidateServicesCache();
 }
 
