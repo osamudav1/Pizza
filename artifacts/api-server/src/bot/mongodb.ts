@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { logger } from "../lib/logger";
 
 const MONGO_URI = process.env["MONGO_URI"] || "mongodb://localhost:27017/pizza_bot";
 
@@ -102,11 +103,37 @@ export const WelcomeModel = mongoose.model<IWelcome>("Welcome", WelcomeSchema);
 export const PremiumEmojiModel = mongoose.model<IPremiumEmoji>("PremiumEmoji", PremiumEmojiSchema);
 
 export async function connectDB() {
-  if (mongoose.connection.readyState >= 1) return;
+  const state = mongoose.connection.readyState;
+  // 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
+  if (state === 1) {
+    logger.debug("[MongoDB] Already connected, skipping");
+    return;
+  }
+  if (state === 2) {
+    logger.debug("[MongoDB] Connection in progress, waiting...");
+    await mongoose.connection.asPromise();
+    return;
+  }
+
+  logger.info({ uri: MONGO_URI.replace(/\/\/[^@]+@/, "//***@") }, "[MongoDB] Connecting...");
   try {
-    await mongoose.connect(MONGO_URI);
-    console.log("Connected to MongoDB");
+    await mongoose.connect(MONGO_URI, {
+      serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 10000,
+    });
+    logger.info("[MongoDB] Connected successfully");
   } catch (err) {
-    console.error("MongoDB connection error:", err);
+    logger.error({ err }, "[MongoDB] Connection FAILED — bot commands will not work");
+    throw err;
   }
 }
+
+mongoose.connection.on("disconnected", () => {
+  logger.warn("[MongoDB] Disconnected from database");
+});
+mongoose.connection.on("reconnected", () => {
+  logger.info("[MongoDB] Reconnected to database");
+});
+mongoose.connection.on("error", (err) => {
+  logger.error({ err }, "[MongoDB] Connection error event");
+});

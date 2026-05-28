@@ -1,4 +1,5 @@
 import { ServiceModel, OrderModel, WelcomeModel, PremiumEmojiModel, connectDB, IService, IOrder } from "./mongodb";
+import { logger } from "../lib/logger";
 
 export interface Service {
   id: string;
@@ -40,9 +41,12 @@ export interface Order {
 }
 
 async function ensureDefaults() {
+  logger.info("[DB] ensureDefaults() — connecting to MongoDB...");
   await connectDB();
   const count = await ServiceModel.countDocuments();
+  logger.info({ serviceCount: count }, "[DB] ensureDefaults() — existing services count");
   if (count === 0) {
+    logger.info("[DB] No services found — inserting defaults...");
     const defaultServices = [
       {
         id: "tg_boost",
@@ -109,10 +113,13 @@ async function ensureDefaults() {
       },
     ];
     await ServiceModel.insertMany(defaultServices);
+    logger.info("[DB] Default services inserted successfully");
   }
 }
 
-ensureDefaults().catch(console.error);
+ensureDefaults().catch((err) => {
+  logger.error({ err }, "[DB] ensureDefaults() FAILED — check MONGO_URI environment variable");
+});
 
 export const db = {
   getData: async (path: string) => {
@@ -155,8 +162,10 @@ export const db = {
 };
 
 export async function getServices(): Promise<Service[]> {
+  logger.debug("[DB] getServices() called");
   await connectDB();
   const docs = await ServiceModel.find().lean();
+  logger.debug({ count: docs.length }, "[DB] getServices() returned");
   return docs.map(d => ({
     id: d.id,
     name: d.name,
@@ -175,8 +184,10 @@ export async function getServices(): Promise<Service[]> {
 }
 
 export async function saveOrder(order: Order): Promise<void> {
+  logger.debug({ orderId: order.orderId, userId: order.userId }, "[DB] saveOrder() called");
   await connectDB();
   await OrderModel.create(order);
+  logger.info({ orderId: order.orderId }, "[DB] Order saved");
 }
 
 export async function updateOrder(orderId: string, updates: Partial<Order>): Promise<void> {
@@ -215,8 +226,10 @@ export async function setPremiumEmoji(emojiId: string): Promise<void> {
 }
 
 export async function getWelcomeMedia(): Promise<{ photo?: string; caption?: string } | null> {
+  logger.debug("[DB] getWelcomeMedia() called");
   await connectDB();
   const doc = await WelcomeModel.findOne().lean();
+  logger.debug({ hasPhoto: !!doc?.photo, hasCaption: !!doc?.caption }, "[DB] getWelcomeMedia() returned");
   return doc ? { photo: doc.photo, caption: doc.caption } : null;
 }
 

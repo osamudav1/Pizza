@@ -85,10 +85,13 @@ function escHtml(text: string): string {
 }
 
 export async function createBot() {
+  logger.info("[Bot] createBot() — initializing...");
   const bot = new Bot<MyContext>(BOT_TOKEN!);
 
   // ─── Load premium emojis from DB into in-memory map ─────────
+  logger.info("[Bot] Loading premium emojis from DB...");
   await loadPremiumEmojis();
+  logger.info("[Bot] Premium emojis loaded");
 
   // ─── Premium Emoji Transformer ─────────────────────────────
   bot.api.config.use((prev, method, payload, signal) => {
@@ -115,14 +118,20 @@ export async function createBot() {
 
   // ─── /start ───────────────────────────────────────────────
   bot.command("start", async (ctx) => {
-    if (ctx.chat.type !== "private") return;
+    logger.info({ userId: ctx.from?.id, username: ctx.from?.username, chatType: ctx.chat.type }, "[/start] Command received");
+    if (ctx.chat.type !== "private") {
+      logger.debug({ chatType: ctx.chat.type }, "[/start] Ignored — not a private chat");
+      return;
+    }
     ctx.session = {};
     
+    logger.debug({ userId: ctx.from?.id }, "[/start] Fetching services and welcome media...");
     // Optimize: Fetch services and welcome media in parallel
     const [services, welcome] = await Promise.all([
       getServices(),
       getWelcomeMedia()
     ]);
+    logger.info({ userId: ctx.from?.id, serviceCount: services.length, hasWelcome: !!welcome }, "[/start] Data loaded");
 
     const defaultCaption = `✨ <b>မင်္ဂလာပါ 🍕 ${bs("Mg Pizza Store")} မှ ကြိုဆိုပါသည်!</b>\n\n` +
       `👤 ${bs("Owner")} သို့ဆက်သွယ်ရန်: <a href="https://t.me/Mg_Piizzaa">@Mg_Piizzaa</a>\n\n` +
@@ -147,13 +156,19 @@ export async function createBot() {
       reply_markup: mainMenuKeyboard(services),
     };
 
-    if (welcome?.photo) {
-      await ctx.replyWithPhoto(welcome.photo, {
-        ...replyOptions,
-        caption,
-      });
-    } else {
-      await ctx.reply(caption, replyOptions);
+    try {
+      if (welcome?.photo) {
+        await ctx.replyWithPhoto(welcome.photo, {
+          ...replyOptions,
+          caption,
+        });
+      } else {
+        await ctx.reply(caption, replyOptions);
+      }
+      logger.info({ userId: ctx.from?.id }, "[/start] Reply sent successfully");
+    } catch (sendErr) {
+      logger.error({ sendErr, userId: ctx.from?.id }, "[/start] Failed to send reply");
+      throw sendErr;
     }
   });
 
