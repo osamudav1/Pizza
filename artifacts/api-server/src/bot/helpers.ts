@@ -1,7 +1,7 @@
 import { Context } from "grammy";
 import { bs } from "./font";
 
-const BOT_LINK = "https://t.me/NFT_Sell_Os_bot";
+const BOT_LINK = "https://t.me/Mg_Piizzaa";
 const MG_FOOTER = `\n<a href="${BOT_LINK}">🍕 ${bs("MG Pizza Services")}</a>`;
 
 export const mgFooter = MG_FOOTER;

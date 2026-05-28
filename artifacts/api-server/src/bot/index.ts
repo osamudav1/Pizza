@@ -340,7 +340,7 @@ export async function createBot() {
   // ─── Callback: MG Service Button ───────────────────────────
   bot.callbackQuery("mg:service", async (ctx) => {
     await ctx.answerCallbackQuery({
-      text: `🍕 MG Pizza Services\n\nt.me/NFT_Sell_Os_bot`,
+      text: `🍕 MG Pizza Services\n\nt.me/Mg_Piizzaa`,
       show_alert: true,
     });
   });
