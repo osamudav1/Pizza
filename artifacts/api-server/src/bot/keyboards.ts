@@ -25,7 +25,7 @@ export function servicePageKeyboard(svc: Service): InlineKeyboard {
   const isContact = svc.targetType === "contact" || svc.category === "contact";
   const kb = new InlineKeyboard();
   if (isContact) {
-    // kb.url(`📩 ${bs("Owner")} ဆက်သွယ်ရန်`, "https://t.me/Mg_Piizzaa").row();
+    kb.url(`📩 ${bs("Owner")} ဆက်သွယ်ရန်`, "https://t.me/Mg_Piizzaa").row();
   } else {
     kb.add(btn(`🛒 ဝယ်ယူရန်`, `buy_service:${svc.id}`, "success")).row();
   }
@@ -100,8 +100,9 @@ export function ownerDoneKeyboard(orderId: string): InlineKeyboard {
 
 export function contactOwnerKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
-    .add(btn(`🔙 ${bs("Back")}`, "back:main", "danger"))
-    ;
+    .url(`📩 ${bs("Owner")} ကို ဆက်သွယ်ရန်`, "https://t.me/Mg_Piizzaa")
+    .row()
+    .add(btn(`🔙 ${bs("Back")}`, "back:main", "danger"));
 }
 
 export function mgServiceButton(): InlineKeyboard {

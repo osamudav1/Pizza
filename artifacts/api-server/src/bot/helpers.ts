@@ -1,7 +1,7 @@
 import { Context } from "grammy";
 import { bs } from "./font";
 
-const MG_FOOTER = `\n🍕 ${bs("MG Pizza Services")}`;
+const MG_FOOTER = "";
 
 export const mgFooter = MG_FOOTER;
 
@@ -20,16 +20,14 @@ export function formatOrderSummary(params: {
   targetInfo?: string;
   quantity?: string;
 }): string {
-  let msg = `🧾 <b>${bs("Order Summary")}</b>\n`;
+  let msg = `🧾 <b>Order Summary</b>\n`;
   msg += `━━━━━━━━━━━━━━━━\n`;
-  msg += `🆔 ${bs("Order ID")}: <code>${params.orderId}</code>\n`;
-  msg += `📦 ${bs("Service")}: ${params.serviceName}\n`;
-  msg += `🎯 ${bs("Package")}: ${params.itemLabel}\n`;
-  if (params.quantity) msg += `📊 ${bs("Quantity")}: ${params.quantity}\n`;
-  // if (params.targetInfo) msg += `🔗 ${bs("Target")}: <code>${params.targetInfo}</code>\n`;
-  msg += `💰 ${bs("Amount")}: ${params.price.toLocaleString()} ${bs("ks")}\n`;
+  msg += `🆔 <b>𝗢𝗿𝗱𝗲𝗿 𝗜𝗗</b>: <code>${params.orderId}</code>\n`;
+  msg += `📦 <b>𝗦𝗲𝗿𝘃𝗶𝗰𝗲</b>: ${params.serviceName}\n`;
+  msg += `🎯 <b>𝗣𝗮𝗰𝗸𝗮𝗴𝗲</b>: ${params.itemLabel}\n`;
+  if (params.quantity) msg += `📊 <b>𝗤𝘂𝗮𝗻𝘁𝗶𝘁𝘆</b>: ${params.quantity}\n`;
+  msg += `💰 <b>𝗔𝗺𝗼𝘂𝗻𝘁</b>: ${params.price.toLocaleString()} ks\n`;
   msg += `━━━━━━━━━━━━━━━━`;
-  msg += MG_FOOTER;
   return msg;
 }
 
@@ -44,19 +42,18 @@ export function formatReceiptNotification(params: {
   unit: string;
   targetInfo?: string;
 }): string {
-  const userRef = params.username ? `@${params.username}` : params.firstName || `${bs("ID")}: ${params.userId}`;
+  const userRef = params.username ? `@${params.username}` : params.firstName || `ID: ${params.userId}`;
   let msg = `🔔 <b>ငွေလွှဲပြေစာ လက်ခံရရှိပါသည်</b>\n`;
   msg += `━━━━━━━━━━━━━━━━\n`;
-  msg += `👤 ${bs("Customer")}: ${userRef}\n`;
-  msg += `🆔 ${bs("User ID")}: <code>${params.userId}</code>\n`;
-  msg += `🆔 ${bs("Order ID")}: <code>${params.orderId}</code>\n`;
-  msg += `📦 ${bs("Service")}: ${params.serviceName}\n`;
-  msg += `🎯 ${bs("Package")}: ${params.itemLabel}\n`;
-  // if (params.targetInfo) msg += `🔗 ${bs("Target")}: <code>${params.targetInfo}</code>\n`;
-  msg += `💰 ${bs("Amount")}: ${params.price.toLocaleString()} ${bs("ks")}\n`;
+  msg += `👤 <b>𝗖𝘂𝘀𝘁𝗼𝗺𝗲𝗿</b>: ${userRef}\n`;
+  msg += `🆔 <b>𝗨𝘀𝗲𝗿 𝗜𝗗</b>: <code>${params.userId}</code>\n`;
+  msg += `🆔 <b>𝗢𝗿𝗱𝗲𝗿 𝗜𝗗</b>: <code>${params.orderId}</code>\n`;
+  msg += `📦 <b>𝗦𝗲𝗿𝘃𝗶𝗰𝗲</b>: ${params.serviceName}\n`;
+  msg += `🎯 <b>𝗣𝗮𝗰𝗸𝗮𝗴𝗲</b>: ${params.itemLabel}\n`;
+  msg += `💰 <b>𝗔𝗺𝗼𝘂𝗻𝘁</b>: ${params.price.toLocaleString()} ks\n`;
   msg += `━━━━━━━━━━━━━━━━\n`;
-  msg += `⏳ စစ်ဆေးပြီး ${bs("confirm")} လုပ်ပေးပါ`;
-  msg += MG_FOOTER;
+  msg += `⏳ စစ်ဆေးပြီး 𝗰𝗼𝗻𝗳𝗶𝗿𝗺 လုပ်ပေးပါ`;
+  // Footer removed as per user request
   return msg;
 }
 

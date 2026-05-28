@@ -137,7 +137,7 @@ export async function createBot() {
     logger.info({ userId: ctx.from?.id, serviceCount: services.length, hasWelcome: !!welcome }, "[/start] Data loaded");
 
     const defaultCaption = `✨ <b>မင်္ဂလာပါ 🍕 ${bs("Mg Pizza Store")} မှ ကြိုဆိုပါသည်!</b>\n\n` +
-      "" +
+      `👤 ${bs("Owner")} သို့ဆက်သွယ်ရန်: <a href="https://t.me/Mg_Piizzaa">@Mg_Piizzaa</a>\n\n` +
       `🛒 ${bs("Service")} များဝယ်ယူရန် တစ်ခုရွေးချယ်ပါ ⬇️`;
     
     let caption = welcome?.caption || defaultCaption;
@@ -375,7 +375,7 @@ export async function createBot() {
     await ctx.editMessageText(
       `📦 <b>အခြား ${bs("Services")} များ</b>\n\n` +
         `ဝယ်ယူရန် <b>${bs("Owner")}</b> ထံ တိုက်ရိုက်ဆက်သွယ်ပေးပါ\n\n` +
-        "" +
+        `👤 <a href="https://t.me/Mg_Piizzaa">@Mg_Piizzaa</a> — ${bs("Owner")}\n\n` +
         `💬 ${bs("Service")} အသေးစိတ် မေးမြန်းနိုင်ပါသည်`,
       { parse_mode: "HTML", reply_markup: contactOwnerKeyboard() }
     );
@@ -678,7 +678,7 @@ export async function createBot() {
         ? `\n💰 ကျသင့်ငွေ: <b>${orgPrice.toLocaleString()} ks</b>`
         : "";
 
-      const packageLabel = `💎 MLBB [Diamong]💎\n\n💰 ဝယ်ယူမည့် 𝗔𝗺𝗼𝘂𝗻𝘁 ကို ရိုက်ထည့်ပါ:\nဥပမာ: 1000\n${text}`;
+      const packageLabel = text;
       await updateOrder(ctx.session.pendingOrderId, { itemLabel: packageLabel });
 
       await ctx.reply(
