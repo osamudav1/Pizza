@@ -1,8 +1,7 @@
 import { Context } from "grammy";
 import { bs } from "./font";
 
-const BOT_LINK = "https://t.me/Mg_Piizzaa";
-const MG_FOOTER = `\n<a href="${BOT_LINK}">🍕 ${bs("MG Pizza Services")}</a>`;
+const MG_FOOTER = `\n🍕 ${bs("MG Pizza Services")}`;
 
 export const mgFooter = MG_FOOTER;
 
@@ -27,7 +26,7 @@ export function formatOrderSummary(params: {
   msg += `📦 ${bs("Service")}: ${params.serviceName}\n`;
   msg += `🎯 ${bs("Package")}: ${params.itemLabel}\n`;
   if (params.quantity) msg += `📊 ${bs("Quantity")}: ${params.quantity}\n`;
-  if (params.targetInfo) msg += `🔗 ${bs("Target")}: <code>${params.targetInfo}</code>\n`;
+  // if (params.targetInfo) msg += `🔗 ${bs("Target")}: <code>${params.targetInfo}</code>\n`;
   msg += `💰 ${bs("Amount")}: ${params.price.toLocaleString()} ${bs("ks")}\n`;
   msg += `━━━━━━━━━━━━━━━━`;
   msg += MG_FOOTER;
@@ -53,7 +52,7 @@ export function formatReceiptNotification(params: {
   msg += `🆔 ${bs("Order ID")}: <code>${params.orderId}</code>\n`;
   msg += `📦 ${bs("Service")}: ${params.serviceName}\n`;
   msg += `🎯 ${bs("Package")}: ${params.itemLabel}\n`;
-  if (params.targetInfo) msg += `🔗 ${bs("Target")}: <code>${params.targetInfo}</code>\n`;
+  // if (params.targetInfo) msg += `🔗 ${bs("Target")}: <code>${params.targetInfo}</code>\n`;
   msg += `💰 ${bs("Amount")}: ${params.price.toLocaleString()} ${bs("ks")}\n`;
   msg += `━━━━━━━━━━━━━━━━\n`;
   msg += `⏳ စစ်ဆေးပြီး ${bs("confirm")} လုပ်ပေးပါ`;

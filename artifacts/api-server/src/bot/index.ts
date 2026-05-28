@@ -137,7 +137,7 @@ export async function createBot() {
     logger.info({ userId: ctx.from?.id, serviceCount: services.length, hasWelcome: !!welcome }, "[/start] Data loaded");
 
     const defaultCaption = `✨ <b>မင်္ဂလာပါ 🍕 ${bs("Mg Pizza Store")} မှ ကြိုဆိုပါသည်!</b>\n\n` +
-      `👤 ${bs("Owner")} သို့ဆက်သွယ်ရန်: <a href="https://t.me/Mg_Piizzaa">@Mg_Piizzaa</a>\n\n` +
+      "" +
       `🛒 ${bs("Service")} များဝယ်ယူရန် တစ်ခုရွေးချယ်ပါ ⬇️`;
     
     let caption = welcome?.caption || defaultCaption;
@@ -364,7 +364,7 @@ export async function createBot() {
   // ─── Callback: MG Service Button ───────────────────────────
   bot.callbackQuery("mg:service", async (ctx) => {
     await ctx.answerCallbackQuery({
-      text: `🍕 MG Pizza Services\n\nt.me/Mg_Piizzaa`,
+      text: `🍕 MG Pizza Services`,
       show_alert: true,
     });
   });
@@ -375,7 +375,7 @@ export async function createBot() {
     await ctx.editMessageText(
       `📦 <b>အခြား ${bs("Services")} များ</b>\n\n` +
         `ဝယ်ယူရန် <b>${bs("Owner")}</b> ထံ တိုက်ရိုက်ဆက်သွယ်ပေးပါ\n\n` +
-        `👤 <a href="https://t.me/Mg_Piizzaa">@Mg_Piizzaa</a> — ${bs("Owner")}\n\n` +
+        "" +
         `💬 ${bs("Service")} အသေးစိတ် မေးမြန်းနိုင်ပါသည်`,
       { parse_mode: "HTML", reply_markup: contactOwnerKeyboard() }
     );
@@ -678,8 +678,11 @@ export async function createBot() {
         ? `\n💰 ကျသင့်ငွေ: <b>${orgPrice.toLocaleString()} ks</b>`
         : "";
 
+      const packageLabel = `💎 MLBB [Diamong]💎\n\n💰 ဝယ်ယူမည့် 𝗔𝗺𝗼𝘂𝗻𝘁 ကို ရိုက်ထည့်ပါ:\nဥပမာ: 1000\n${text}`;
+      await updateOrder(ctx.session.pendingOrderId, { itemLabel: packageLabel });
+
       await ctx.reply(
-        `✅ Amount: <b>${escHtml(text)}</b>${priceText}\n\n` +
+        `✅ Package: <b>${escHtml(text)}</b>${priceText}\n\n` +
         `📋 <b>${bs("Player ID")}</b> ${targetType === "uc" ? "(Character ID) " : ""}ရိုက်ထည့်ပါ:`,
         { parse_mode: "HTML" }
       );
@@ -1805,17 +1808,23 @@ export async function createBot() {
     // ── Org Price add ──
     } else if (step === "orgprice_add") {
       const svcId = ctx.session.editServiceId!;
-      const match = text.match(/^(\d[\d,]*)\s*[:|]\s*(\d[\d,]*)$/);
-      if (!match) {
-        await ctx.reply(
-          `❌ Format မှား\n\nFormat: <code>amount:price</code>\nဥပမာ: <code>2000:35000</code>`,
-          { parse_mode: "HTML" }
-        );
-        return;
+      const lines = text.split("\n").filter(l => l.trim().length > 0);
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const line of lines) {
+        // Handle various formats: "86-5350ks", "86:5350", "86|5350", "86 5350"
+        const match = line.match(/^(\d[\d,]*)\s*[-:| ]\s*(\d[\d,]*)/);
+        if (match) {
+          const amount = match[1].replace(/,/g, "");
+          const price = parseInt(match[2].replace(/,/g, ""), 10);
+          await addOrgPrice(svcId, amount, price);
+          successCount++;
+        } else {
+          failCount++;
+        }
       }
-      const amount = match[1].replace(/,/g, "");
-      const price = parseInt(match[2].replace(/,/g, ""), 10);
-      await addOrgPrice(svcId, amount, price);
+
       // Refresh and show updated table
       const services = await getServices();
       const svc = services.find((s) => s.id === svcId);
@@ -1825,9 +1834,11 @@ export async function createBot() {
       for (const [amt, pr] of entries) {
         priceList += `• ${Number(amt).toLocaleString()} → <b>${pr.toLocaleString()} ks</b>\n`;
       }
-      priceList += `\nFormat: <code>amount:price</code> — ဆက်ထည့်နိုင်သည်`;
+      priceList += `\n✅ ${successCount} ခု ထည့်သွင်းပြီးပါပြီ`;
+      if (failCount > 0) priceList += `\n❌ ${failCount} ခု format မှားနေပါသည်`;
+      priceList += `\n\nFormat: <code>amount-price</code> (တစ်ကြောင်းချင်းစီ)\nဥပမာ:\n<code>86-5350ks\n172-10800ks</code>`;
+      
       await ctx.reply(priceList, { parse_mode: "HTML", reply_markup: adminOrgPriceKeyboard(svcId) });
-      // Keep step so admin can keep adding more
     }
   }
 
