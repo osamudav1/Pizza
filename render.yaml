@@ -25,6 +25,10 @@ services:
         fromDatabase:
           name: pizza-db
           property: connectionString
+      - key: MONGODB_URI
+        fromDatabase:
+          name: pizza-db
+          property: connectionString
 
 databases:
   - name: pizza-db
