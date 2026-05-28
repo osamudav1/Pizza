@@ -120,6 +120,10 @@ export async function connectDB() {
     await mongoose.connect(MONGO_URI, {
       serverSelectionTimeoutMS: 10000,
       connectTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 10,        // connection pool — parallel queries မြန်မည်
+      minPoolSize: 2,         // အမြဲ connections ၂ ခု သင့်တော်မည်
+      maxIdleTimeMS: 60000,   // idle connection 1 min ပြီးရင် close
     });
     logger.info("[MongoDB] Connected successfully");
   } catch (err) {

@@ -161,12 +161,26 @@ export const db = {
   },
 };
 
+// ── In-memory cache for services (30s TTL) ──────────────────
+let _servicesCache: Service[] | null = null;
+let _servicesCacheAt = 0;
+const SERVICES_TTL_MS = 30_000;
+
+export function invalidateServicesCache() {
+  _servicesCache = null;
+  _servicesCacheAt = 0;
+}
+
 export async function getServices(): Promise<Service[]> {
-  logger.debug("[DB] getServices() called");
+  const now = Date.now();
+  if (_servicesCache && now - _servicesCacheAt < SERVICES_TTL_MS) {
+    logger.debug("[DB] getServices() — cache hit");
+    return _servicesCache;
+  }
+  logger.debug("[DB] getServices() — fetching from DB");
   await connectDB();
   const docs = await ServiceModel.find().lean();
-  logger.debug({ count: docs.length }, "[DB] getServices() returned");
-  return docs.map(d => ({
+  const services = docs.map(d => ({
     id: d.id,
     name: d.name,
     category: d.category,
@@ -181,6 +195,10 @@ export async function getServices(): Promise<Service[]> {
       requireContact: i.requireContact
     }))
   }));
+  _servicesCache = services;
+  _servicesCacheAt = now;
+  logger.debug({ count: services.length }, "[DB] getServices() — cached");
+  return services;
 }
 
 export async function saveOrder(order: Order): Promise<void> {
@@ -204,16 +222,19 @@ export async function getOrder(orderId: string): Promise<Order | null> {
 export async function addService(service: Service): Promise<void> {
   await connectDB();
   await ServiceModel.create(service);
+  invalidateServicesCache();
 }
 
 export async function updateService(serviceId: string, updates: Partial<Service>): Promise<void> {
   await connectDB();
   await ServiceModel.findOneAndUpdate({ id: serviceId }, updates);
+  invalidateServicesCache();
 }
 
 export async function deleteService(serviceId: string): Promise<void> {
   await connectDB();
   await ServiceModel.findOneAndDelete({ id: serviceId });
+  invalidateServicesCache();
 }
 
 export async function getPremiumEmoji(): Promise<string | null> {
