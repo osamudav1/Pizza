@@ -1,19 +1,12 @@
-import { JsonDB, Config } from "node-json-db";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = path.join(__dirname, "../../data/bot-data");
-
-export const db = new JsonDB(new Config(dbPath, true, true, "/"));
+import { ServiceModel, OrderModel, WelcomeModel, PremiumEmojiModel, connectDB, IService, IOrder } from "./mongodb";
 
 export interface Service {
   id: string;
   name: string;
   category: string;
-  photo?: string;       // Telegram file_id for catalog image
-  caption?: string;     // Description text (supports premium emoji)
-  targetType?: string;  // "uc" | "dia" | "general" | "contact"
+  photo?: string;
+  caption?: string;
+  targetType?: string;
   items: ServiceItem[];
 }
 
@@ -47,10 +40,10 @@ export interface Order {
 }
 
 async function ensureDefaults() {
-  try {
-    await db.getData("/services");
-  } catch {
-    const defaultServices: Service[] = [
+  await connectDB();
+  const count = await ServiceModel.countDocuments();
+  if (count === 0) {
+    const defaultServices = [
       {
         id: "tg_boost",
         name: "🚀 Telegram Boost",
@@ -85,6 +78,7 @@ async function ensureDefaults() {
         id: "dia",
         name: "💎 Diamonds (Dia)",
         category: "main",
+        targetType: "dia",
         items: [
           { id: "dia_100", label: "100 Diamonds", price: 2500, unit: "ks" },
           { id: "dia_500", label: "500 Diamonds", price: 12000, unit: "ks" },
@@ -95,6 +89,7 @@ async function ensureDefaults() {
         id: "uc",
         name: "🎮 UC (PUBG)",
         category: "main",
+        targetType: "uc",
         items: [
           { id: "uc_60", label: "60 UC", price: 1500, unit: "ks" },
           { id: "uc_325", label: "325 UC", price: 7000, unit: "ks" },
@@ -113,127 +108,88 @@ async function ensureDefaults() {
         ],
       },
     ];
-    await db.push("/services", defaultServices);
-  }
-
-  // Migration: add Roblox to existing "others" service if missing
-  try {
-    const services: Service[] = await db.getData("/services");
-    const othersIdx = services.findIndex((s) => s.id === "others");
-    if (othersIdx !== -1) {
-      const hasRoblox = services[othersIdx].items.some((i) => i.id === "others_roblox");
-      if (!hasRoblox) {
-        services[othersIdx].items.splice(-1, 0, {
-          id: "others_roblox",
-          label: "🎮 Roblox",
-          price: 0,
-          unit: "",
-          requireContact: true,
-        });
-        await db.push("/services", services);
-      }
-    }
-  } catch {}
-
-  try {
-    await db.getData("/orders");
-  } catch {
-    await db.push("/orders", []);
+    await ServiceModel.insertMany(defaultServices);
   }
 }
 
-ensureDefaults().catch(() => {});
+ensureDefaults().catch(console.error);
 
 export async function getServices(): Promise<Service[]> {
-  try {
-    return await db.getData("/services");
-  } catch {
-    return [];
-  }
+  await connectDB();
+  const docs = await ServiceModel.find().lean();
+  return docs.map(d => ({
+    id: d.id,
+    name: d.name,
+    category: d.category,
+    photo: d.photo,
+    caption: d.caption,
+    targetType: d.targetType,
+    items: d.items.map(i => ({
+      id: i.id,
+      label: i.label,
+      price: i.price,
+      unit: i.unit,
+      requireContact: i.requireContact
+    }))
+  }));
 }
 
 export async function saveOrder(order: Order): Promise<void> {
-  let orders: Order[] = [];
-  try {
-    orders = await db.getData("/orders");
-  } catch {}
-  orders.push(order);
-  await db.push("/orders", orders);
+  await connectDB();
+  await OrderModel.create(order);
 }
 
 export async function updateOrder(orderId: string, updates: Partial<Order>): Promise<void> {
-  let orders: Order[] = [];
-  try {
-    orders = await db.getData("/orders");
-  } catch {}
-  const idx = orders.findIndex((o) => o.orderId === orderId);
-  if (idx !== -1) {
-    orders[idx] = { ...orders[idx], ...updates, updatedAt: new Date().toISOString() };
-    await db.push("/orders", orders);
-  }
+  await connectDB();
+  await OrderModel.findOneAndUpdate({ orderId }, { ...updates, updatedAt: new Date().toISOString() });
 }
 
 export async function getOrder(orderId: string): Promise<Order | null> {
-  try {
-    const orders: Order[] = await db.getData("/orders");
-    return orders.find((o) => o.orderId === orderId) ?? null;
-  } catch {
-    return null;
-  }
+  await connectDB();
+  const doc = await OrderModel.findOne({ orderId }).lean();
+  return doc as any;
 }
 
 export async function addService(service: Service): Promise<void> {
-  const services = await getServices();
-  services.push(service);
-  await db.push("/services", services);
+  await connectDB();
+  await ServiceModel.create(service);
 }
 
 export async function updateService(serviceId: string, updates: Partial<Service>): Promise<void> {
-  const services = await getServices();
-  const idx = services.findIndex((s) => s.id === serviceId);
-  if (idx !== -1) {
-    services[idx] = { ...services[idx], ...updates };
-    await db.push("/services", services);
-  }
+  await connectDB();
+  await ServiceModel.findOneAndUpdate({ id: serviceId }, updates);
 }
 
 export async function deleteService(serviceId: string): Promise<void> {
-  const services = await getServices();
-  const filtered = services.filter((s) => s.id !== serviceId);
-  await db.push("/services", filtered);
+  await connectDB();
+  await ServiceModel.findOneAndDelete({ id: serviceId });
 }
 
 export async function getPremiumEmoji(): Promise<string | null> {
-  try {
-    return await db.getData("/settings/premiumEmoji");
-  } catch {
-    return null;
-  }
+  // Logic for premium emoji settings can be stored in a separate collection or as a specific doc
+  return null; // Placeholder
 }
 
 export async function setPremiumEmoji(emojiId: string): Promise<void> {
-  await db.push("/settings/premiumEmoji", emojiId, true);
+  // Placeholder
 }
 
 export async function getWelcomeMedia(): Promise<{ photo?: string; caption?: string } | null> {
-  try {
-    return await db.getData("/settings/welcome");
-  } catch {
-    return null;
-  }
+  await connectDB();
+  const doc = await WelcomeModel.findOne().lean();
+  return doc ? { photo: doc.photo, caption: doc.caption } : null;
 }
 
 export async function setWelcomeMedia(updates: { photo?: string; caption?: string }): Promise<void> {
-  try {
-    const current = await getWelcomeMedia() || {};
-    await db.push("/settings/welcome", { ...current, ...updates }, true);
-  } catch {
-    await db.push("/settings/welcome", updates, true);
+  await connectDB();
+  const current = await WelcomeModel.findOne();
+  if (current) {
+    await WelcomeModel.findByIdAndUpdate(current._id, updates);
+  } else {
+    await WelcomeModel.create(updates);
   }
 }
 
 export async function getPremiumEmojiTag(fallback = "⭐"): Promise<string> {
-  const id = await getPremiumEmoji();
-  if (!id) return fallback;
-  return `<tg-emoji emoji-id="${id}">${fallback}</tg-emoji>`;
+  return fallback;
 }

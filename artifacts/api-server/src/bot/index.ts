@@ -122,7 +122,19 @@ export async function createBot() {
       `👤 ${bs("Owner")} သို့ဆက်သွယ်ရန်: <a href="https://t.me/Mg_Piizzaa">@Mg_Piizzaa</a>\n\n` +
       `🛒 ${bs("Service")} များဝယ်ယူရန် တစ်ခုရွေးချယ်ပါ ⬇️`;
     
-    const caption = welcome?.caption || defaultCaption;
+    let caption = welcome?.caption || defaultCaption;
+    
+    // Welcome caption formatting: replace {mention} with user mention
+    if (caption.includes("{mention}")) {
+      const mention = ctx.from?.username ? `@${ctx.from.username}` : `<a href="tg://user?id=${ctx.from?.id}">${ctx.from?.first_name}</a>`;
+      caption = caption.replace(/{mention}/g, mention);
+    }
+    if (caption.includes("{name}")) {
+      caption = caption.replace(/{name}/g, ctx.from?.first_name || "User");
+    }
+    if (caption.includes("{id}")) {
+      caption = caption.replace(/{id}/g, ctx.from?.id.toString() || "");
+    }
 
     if (welcome?.photo) {
       await ctx.replyWithPhoto(welcome.photo, {
@@ -482,7 +494,6 @@ export async function createBot() {
       ctx.session.step = "v2_waiting_amount";
       await ctx.reply(
         `${targetType === "uc" ? "🎮" : "💎"} <b>${escHtml(svc.name)}</b>\n\n` +
-        kpayInfo + `\n\n` +
         `💰 ဝယ်ယူမည့် <b>${bs("Amount")}</b> ကို ရိုက်ထည့်ပါ:\n<i>ဥပမာ: 1000</i>`,
         { parse_mode: "HTML" }
       );
@@ -657,8 +668,11 @@ export async function createBot() {
         // UC — player ID is enough, then ask for receipt
         await updateOrder(ctx.session.pendingOrderId, { targetInfo: `Player ID: ${text}` });
         ctx.session.step = "waiting_receipt";
+        
+        const kpayInfo = `💳 <b>${bs("KPay / Wave")} နံပါတ်:</b> <code>${escHtml(KPAY_NUMBER!)}</code>`;
         await ctx.reply(
           `✅ ${bs("Player ID")}: <code>${escHtml(text)}</code>\n\n` +
+          kpayInfo + `\n\n` +
           `📸 <b>${bs("KPay/Wave")} ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`,
           { parse_mode: "HTML" }
         );
@@ -676,8 +690,10 @@ export async function createBot() {
       });
       ctx.session.step = "waiting_receipt";
       ctx.session.collectedPlayerId = undefined;
+      const kpayInfo = `💳 <b>${bs("KPay / Wave")} နံပါတ်:</b> <code>${escHtml(KPAY_NUMBER!)}</code>`;
       await ctx.reply(
         `✅ <b>${bs("Game ID")}:</b> <code>${escHtml(playerId)} ${escHtml(text)}</code>\n\n` +
+        kpayInfo + `\n\n` +
         `📸 <b>${bs("KPay/Wave")} ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`,
         { parse_mode: "HTML" }
       );
