@@ -119,6 +119,16 @@ export async function createBot() {
     })
   );
 
+  // Global Error Handler to prevent bot from crashing
+  bot.catch((err) => {
+    const ctx = err.ctx;
+    logger.error({ 
+      err: err.error, 
+      updateId: ctx.update.update_id,
+      userId: ctx.from?.id 
+    }, "[BotError] Error in bot execution");
+  });
+
   // ─── /start ───────────────────────────────────────────────
   bot.command("start", async (ctx) => {
     logger.info({ userId: ctx.from?.id, username: ctx.from?.username, chatType: ctx.chat.type }, "[/start] Command received");
@@ -266,8 +276,13 @@ export async function createBot() {
       const emoji = parts[0];
       const id = parts[1];
       if (/^\d+$/.test(id)) {
-        await setPremiumEmoji(emoji, id);
-        await ctx.reply(`✅ <b>${emoji}</b> mapping ထည့်ပြီးပါပြီ!`, { parse_mode: "HTML" });
+        try {
+          await setPremiumEmoji(emoji, id);
+          await ctx.reply(`✅ <b>${emoji}</b> mapping ထည့်ပြီးပါပြီ!`, { parse_mode: "HTML" });
+        } catch (err) {
+          logger.error({ err }, "Failed to direct set premium emoji");
+          await ctx.reply("❌ အမှားအယွင်းရှိပါသည်။");
+        }
         return;
       }
     }
@@ -602,13 +617,18 @@ export async function createBot() {
 
         if (foundId) {
           const original = ctx.session.premium_original_emoji!;
-          await setPremiumEmoji(original, foundId);
-          await ctx.reply(
-            `✅ <b>အောင်မြင်ပါသည်!</b>\n\n` +
-            `${original} → <tg-emoji emoji-id="${foundId}">${original}</tg-emoji>\n\n` +
-            `ယခုမှစ၍ Bot တစ်ခုလုံးရှိ ${original} အားလုံးကို Premium Emoji ဖြင့် ပြောင်းလဲပြသမည်ဖြစ်သည် ✨`,
-            { parse_mode: "HTML" }
-          );
+          try {
+            await setPremiumEmoji(original, foundId);
+            await ctx.reply(
+              `✅ <b>အောင်မြင်ပါသည်!</b>\n\n` +
+              `${original} → <tg-emoji emoji-id="${foundId}">${original}</tg-emoji>\n\n` +
+              `ယခုမှစ၍ Bot တစ်ခုလုံးရှိ ${original} အားလုံးကို Premium Emoji ဖြင့် ပြောင်းလဲပြသမည်ဖြစ်သည် ✨`,
+              { parse_mode: "HTML" }
+            );
+          } catch (err) {
+            logger.error({ err }, "Failed to set premium emoji");
+            await ctx.reply("❌ သိမ်းဆည်းရာတွင် အမှားအယွင်းရှိပါသည်။");
+          }
           ctx.session.premium_emoji_step = undefined;
           ctx.session.premium_original_emoji = undefined;
         } else {
