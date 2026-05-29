@@ -20,10 +20,31 @@ export function mainMenuKeyboard(services: Service[]): InlineKeyboard {
   return kb;
 }
 
-// New-style service page: photo+caption → Buy or Contact + Back
+// New-style service page: photo+caption → Items (2x2) → Buy or Contact + Back
 export function servicePageKeyboard(svc: Service): InlineKeyboard {
   const isContact = svc.targetType === "contact" || svc.category === "contact";
   const kb = new InlineKeyboard();
+
+  // Add items in 2 columns (max 2 rows as requested)
+  const items = svc.items || [];
+  const displayItems = items.slice(0, 4); // 2 rows * 2 cols = 4 items
+
+  for (let i = 0; i < displayItems.length; i += 2) {
+    const rowItems = displayItems.slice(i, i + 2);
+    const buttons = rowItems.map(item => {
+      if (item.requireContact) {
+        return btn(`📞 ${bs(item.label)}`, `contact:${svc.id}:${item.id}`, "primary");
+      } else {
+        return btn(
+          `${bs(item.label)} · ${item.price.toLocaleString()}ks`,
+          `buy:${svc.id}:${item.id}`,
+          "success"
+        );
+      }
+    });
+    kb.add(...buttons).row();
+  }
+
   if (isContact) {
     kb.url(`📩 ${bs("Owner")} ဆက်သွယ်ရန်`, "https://t.me/Mg_Piizzaa").row();
   } else {
