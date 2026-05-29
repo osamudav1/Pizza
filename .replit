@@ -1,4 +1,4 @@
-modules = ["nodejs-24", "python-3.11"]
+modules = ["nodejs-20", "web", "bash"]
 
 [deployment]
 router = "application"
@@ -24,16 +24,16 @@ args = "Start application"
 name = "Start application"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd artifacts/api-server && PORT=8080 pnpm run dev"
-waitForPort = 8080
-
 [workflows.workflow.metadata]
 outputType = "console"
 
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd artifacts/api-server && PORT=3000 pnpm run dev"
+waitForPort = 3000
+
 [agent]
-stack = "PNPM_WORKSPACE"
+stack = "BEST_EFFORT_FALLBACK"
 expertMode = true
 
 [postMerge]
@@ -52,9 +52,15 @@ externalPort = 80
 localPort = 8082
 externalPort = 3000
 
+[[ports]]
+localPort = 3000
+externalPort = 3000
+
 [userenv]
 
 [userenv.shared]
 GROUP_CHAT_ID = "-1003916887393"
 OWNER_CHAT_ID = "1735522859"
-BOT_TOKEN = "8601464784:AAEE85abYn10yWmhzfrbjpNXb0xEoHxtrLg"
+
+[nix]
+channel = "stable-25_05"
