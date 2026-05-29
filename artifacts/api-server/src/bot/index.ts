@@ -99,14 +99,25 @@ export async function createBot() {
   // ─── Premium Emoji Transformer ─────────────────────────────
   bot.api.config.use((prev, method, payload, signal) => {
     const p = payload as any;
-    if (p && (typeof p.text === "string" || typeof p.caption === "string")) {
-      const targetField = typeof p.text === "string" ? "text" : "caption";
-      const originalText = p[targetField];
-      const replacedText = applyPremiumEmojis(originalText);  // sync now
-
-      if (replacedText !== originalText) {
-        p[targetField] = replacedText;
-        p.parse_mode = "HTML";
+    if (p) {
+      // Top-level text or caption (sendMessage, sendPhoto, editMessageText, editMessageCaption, etc.)
+      if (typeof p.text === "string" || typeof p.caption === "string") {
+        const targetField = typeof p.text === "string" ? "text" : "caption";
+        const originalText = p[targetField];
+        const replacedText = applyPremiumEmojis(originalText);
+        if (replacedText !== originalText) {
+          p[targetField] = replacedText;
+          p.parse_mode = "HTML";
+        }
+      }
+      // Nested caption inside editMessageMedia — p.media.caption
+      if (p.media && typeof p.media.caption === "string") {
+        const originalCaption = p.media.caption;
+        const replacedCaption = applyPremiumEmojis(originalCaption);
+        if (replacedCaption !== originalCaption) {
+          p.media.caption = replacedCaption;
+          p.media.parse_mode = "HTML";
+        }
       }
     }
     return prev(method, payload, signal);
