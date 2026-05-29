@@ -298,31 +298,43 @@ export async function createBot() {
 
     // New-style: service has a catalog photo/caption set by owner
     if (svc.photo || svc.caption) {
-      try { await ctx.deleteMessage(); } catch {}
-      if (svc.photo) {
-        // If caption looks like plain text (no HTML tags), HTML-escape it so
-        // that special chars (&, <, >) don't break parse_mode:HTML, while
-        // still allowing the premium emoji transformer to inject <tg-emoji> tags.
-        const rawCap = svc.caption || escHtml(svc.name);
-        const captionHtml = rawCap.includes("<") ? rawCap : rawCap
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;");
-        await ctx.replyWithPhoto(svc.photo, {
-          caption: captionHtml,
-          parse_mode: "HTML",
-          reply_markup: servicePageKeyboard(svc),
-        });
-      } else {
-        const rawCap = svc.caption!;
-        const captionHtml = rawCap.includes("<") ? rawCap : rawCap
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;");
-        await ctx.reply(captionHtml, {
-          parse_mode: "HTML",
-          reply_markup: servicePageKeyboard(svc),
-        });
+      const rawCap = svc.caption || escHtml(svc.name);
+      const captionHtml = rawCap.includes("<") ? rawCap : rawCap
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+      
+      try {
+        if (svc.photo) {
+          await ctx.editMessageMedia({
+            type: "photo",
+            media: svc.photo,
+            caption: captionHtml,
+            parse_mode: "HTML",
+          }, {
+            reply_markup: servicePageKeyboard(svc),
+          });
+        } else {
+          await ctx.editMessageText(captionHtml, {
+            parse_mode: "HTML",
+            reply_markup: servicePageKeyboard(svc),
+          });
+        }
+      } catch (err) {
+        // If edit fails (e.g. message doesn't have media but we try to edit media), fallback to delete and reply
+        try { await ctx.deleteMessage(); } catch {}
+        if (svc.photo) {
+          await ctx.replyWithPhoto(svc.photo, {
+            caption: captionHtml,
+            parse_mode: "HTML",
+            reply_markup: servicePageKeyboard(svc),
+          });
+        } else {
+          await ctx.reply(captionHtml, {
+            parse_mode: "HTML",
+            reply_markup: servicePageKeyboard(svc),
+          });
+        }
       }
       return;
     }
@@ -368,12 +380,17 @@ export async function createBot() {
     await ctx.answerCallbackQuery();
     ctx.session = {};
     const services = await getServices();
-    // Delete current message (may be a photo) and send new text message
-    try { await ctx.deleteMessage(); } catch {}
-    await ctx.reply(
-      `🛒 <b>${bs("Service Menu")}</b>\n\nဝယ်ယူလိုသော ${bs("service")} ကိုနှိပ်ပါ ⬇️`,
-      { parse_mode: "HTML", reply_markup: mainMenuKeyboard(services) }
-    );
+    const text = `🛒 <b>${bs("Service Menu")}</b>\n\nဝယ်ယူလိုသော ${bs("service")} ကိုနှိပ်ပါ ⬇️`;
+    const kb = mainMenuKeyboard(services);
+    
+    try {
+      // Try editing text first
+      await ctx.editMessageText(text, { parse_mode: "HTML", reply_markup: kb });
+    } catch (err) {
+      // If editing text fails (likely because it's a photo message), try deleting and replying
+      try { await ctx.deleteMessage(); } catch {}
+      await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
+    }
   });
 
   // ─── Callback: MG Service Button ───────────────────────────
@@ -435,68 +452,48 @@ export async function createBot() {
       `🎯 ${bs("Package")}: ${escHtml(item.label)}\n` +
       `💰 ငွေပမာဏ: <b>${item.price.toLocaleString()} ks</b>\n\n`;
 
-    try { await ctx.deleteMessage(); } catch {}
+    let buyText = "";
+    let buyKb: any = undefined;
 
     if (targetType === "uc") {
       ctx.session.step = "v2_waiting_player_id";
-      await ctx.reply(
-        orderHeader + `📋 <b>${bs("Game ID")}</b> ရိုက်ထည့်ပါ:\n<i>ဥပမာ: 5123456789</i>`,
-        { parse_mode: "HTML" }
-      );
+      buyText = orderHeader + `📋 <b>${bs("Game ID")}</b> ရိုက်ထည့်ပါ:\n<i>ဥပမာ: 5123456789</i>`;
     } else if (targetType === "dia") {
       ctx.session.step = "v2_waiting_player_id";
-      await ctx.reply(
-        orderHeader + `📋 <b>${bs("Game ID")}</b> ရိုက်ထည့်ပါ:`,
-        { parse_mode: "HTML" }
-      );
+      buyText = orderHeader + `📋 <b>${bs("Game ID")}</b> ရိုက်ထည့်ပါ:`;
     } else if (svc.id === "tg_boost") {
       ctx.session.step = "waiting_target";
-      await ctx.reply(
-        orderHeader + `📢 ${bs("Channel/Group username")} ပေးပို့ပါ\n<code>(ဥပမာ: @mychannel)</code>`,
-        { parse_mode: "HTML" }
-      );
+      buyText = orderHeader + `📢 ${bs("Channel/Group username")} ပေးပို့ပါ\n<code>(ဥပမာ: @mychannel)</code>`;
     } else if (svc.id === "tiktok") {
       ctx.session.step = "waiting_target";
-      await ctx.reply(
-        orderHeader + `🎵 ${bs("TikTok Post/Profile Link")} ပေးပို့ပါ`,
-        { parse_mode: "HTML" }
-      );
+      buyText = orderHeader + `🎵 ${bs("TikTok Post/Profile Link")} ပေးပို့ပါ`;
     } else if (svc.id === "tg_star") {
       ctx.session.step = "waiting_target";
-      await ctx.reply(
-        orderHeader + `⭐ ${bs("Telegram username")} ပေးပို့ပါ\n<code>(ဥပမာ: @myusername)</code>`,
-        { parse_mode: "HTML" }
-      );
+      buyText = orderHeader + `⭐ ${bs("Telegram username")} ပေးပို့ပါ\n<code>(ဥပမာ: @myusername)</code>`;
     } else if (item.requireContact) {
-      // Contact item — show owner link
       ctx.session.step = undefined;
       ctx.session.pendingOrderId = undefined;
-      await ctx.reply(
-        `📞 <b>${escHtml(item.label)}</b>\n\n` +
-        `ဤ service အတွက် owner ထံ တိုက်ရိုက်ဆက်သွယ်ပေးပါ`,
-        { parse_mode: "HTML", reply_markup: contactOwnerKeyboard() }
-      );
+      buyText = `📞 <b>${escHtml(item.label)}</b>\n\nဤ service အတွက် owner ထံ တိုက်ရိုက်ဆက်သွယ်ပေးပါ`;
+      buyKb = contactOwnerKeyboard();
     } else if (targetType === "general") {
       ctx.session.step = "waiting_target";
-      await ctx.reply(
-        orderHeader + `📋 ${bs("Target Info")} (username, link, etc.) ရိုက်ထည့်ပါ:`,
-        { parse_mode: "HTML" }
-      );
+      buyText = orderHeader + `📋 ${bs("Target Info")} (username, link, etc.) ရိုက်ထည့်ပါ:`;
     } else {
-      // Instant — no target needed, straight to receipt
       ctx.session.step = "waiting_receipt";
-      await ctx.reply(
-        formatOrderSummary({
-          orderId,
-          serviceName: svc.name,
-          itemLabel: item.label,
-          price: item.price,
-          unit: item.unit,
-        }) +
-          `\n\n${kpayInfo}\n\n` +
-          `📸 ငွေလွှဲပြေစာ ဓာတ်ပုံ (သို့မဟုတ်) ငွေလွှဲ ${bs("screenshot")} ကို ဤနေရာတွင် ပို့ပေးပါ`,
-        { parse_mode: "HTML" }
-      );
+      buyText = formatOrderSummary({
+        orderId,
+        serviceName: svc.name,
+        itemLabel: item.label,
+        price: item.price,
+        unit: item.unit,
+      }) + `\n\n${kpayInfo}\n\n📸 ငွေလွှဲပြေစာ ဓာတ်ပုံ (သို့မဟုတ်) ငွေလွှဲ ${bs("screenshot")} ကို ဤနေရာတွင် ပို့ပေးပါ`;
+    }
+
+    try {
+      await ctx.editMessageText(buyText, { parse_mode: "HTML", reply_markup: buyKb });
+    } catch (err) {
+      try { await ctx.deleteMessage(); } catch {}
+      await ctx.reply(buyText, { parse_mode: "HTML", reply_markup: buyKb });
     }
   });
 
@@ -529,23 +526,23 @@ export async function createBot() {
     const kpayInfo = `💳 <b>${bs("KPay / Wave")} နံပါတ်:</b> <code>${escHtml(KPAY_NUMBER!)}</code>`;
     const targetType = svc.targetType || "general";
 
-    try { await ctx.deleteMessage(); } catch {}
-
+    let buySvcText = "";
     if (targetType === "uc" || targetType === "dia") {
       ctx.session.step = "v2_waiting_amount";
-      await ctx.reply(
-        `${targetType === "uc" ? "🎮" : "💎"} <b>${escHtml(svc.name)}</b>\n\n` +
-        `💰 ဝယ်ယူမည့် <b>${bs("Amount")}</b> ကို ရိုက်ထည့်ပါ:\n<i>ဥပမာ: 1000</i>`,
-        { parse_mode: "HTML" }
-      );
+      buySvcText = `${targetType === "uc" ? "🎮" : "💎"} <b>${escHtml(svc.name)}</b>\n\n` +
+        `💰 ဝယ်ယူမည့် <b>${bs("Amount")}</b> ကို ရိုက်ထည့်ပါ:\n<i>ဥပမာ: 1000</i>`;
     } else {
       ctx.session.step = "waiting_target";
-      await ctx.reply(
-        `📦 <b>${escHtml(svc.name)}</b>\n\n` +
+      buySvcText = `📦 <b>${escHtml(svc.name)}</b>\n\n` +
         kpayInfo + `\n\n` +
-        `📋 ${bs("Target Info")} (username, link, etc.) ရိုက်ထည့်ပါ:`,
-        { parse_mode: "HTML" }
-      );
+        `📋 ${bs("Target Info")} (username, link, etc.) ရိုက်ထည့်ပါ:`;
+    }
+
+    try {
+      await ctx.editMessageText(buySvcText, { parse_mode: "HTML" });
+    } catch (err) {
+      try { await ctx.deleteMessage(); } catch {}
+      await ctx.reply(buySvcText, { parse_mode: "HTML" });
     }
   });
 
