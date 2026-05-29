@@ -17,7 +17,8 @@ export async function loadPremiumEmojis(): Promise<void> {
     const raw: Record<string, string> = await db.getData(DB_PATH);
     premiumEmojiMap.clear();
     for (const [emoji, id] of Object.entries(raw)) {
-      premiumEmojiMap.set(emoji, id);
+      // Normalize when loading to ensure consistent keys
+      premiumEmojiMap.set(normalizeEmoji(emoji), id);
     }
   } catch {
     // DB မှာ မရှိသေးရင် empty ပဲ ထားပါ
@@ -69,17 +70,30 @@ export function extractFirstEmoji(text: string): string {
   return [...text].find(c => c.trim() !== "") || "✨";
 }
 
-// In-memory map ကိုသုံး — async မဟုတ်တော့ speed မြန်သည်
+// Single-pass replacement to avoid recursion and handle overlapping emojis
 export function applyPremiumEmojis(text: string): string {
   if (premiumEmojiMap.size === 0) return text;
 
-  let result = text;
-  for (const [emoji, id] of premiumEmojiMap.entries()) {
-    const tag = `<tg-emoji emoji-id="${id}">${emoji}</tg-emoji>`;
-    const escaped = emoji.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    result = result.replace(new RegExp(`${escaped}[\uFE0E\uFE0F]?`, "gu"), tag);
-  }
-  return result;
+  // Sort by length descending to match longest sequences first (e.g., 👨‍👩‍👧‍👦 before 👨)
+  const sortedEmojis = Array.from(premiumEmojiMap.keys()).sort((a, b) => b.length - a.length);
+  
+  // Create a combined regex for all emojis in the map
+  // Each emoji is escaped and followed by an optional variation selector
+  const pattern = sortedEmojis.map(e => {
+    const escaped = e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return `${escaped}[\uFE0E\uFE0F]?`;
+  }).join("|");
+  
+  const regex = new RegExp(`(${pattern})`, "gu");
+  
+  return text.replace(regex, (match) => {
+    const normalized = normalizeEmoji(match);
+    const id = premiumEmojiMap.get(normalized);
+    if (id) {
+      return `<tg-emoji emoji-id="${id}">${match}</tg-emoji>`;
+    }
+    return match;
+  });
 }
 
 // Legacy compat aliases

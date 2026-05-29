@@ -242,6 +242,31 @@ export async function createBot() {
       return;
     }
 
+    // ── import ──
+    if (lower === "import") {
+      const dataPath = "/home/ubuntu/Pizza/artifacts/data/bot-data.json";
+      try {
+        const fs = await import("fs/promises");
+        const data = JSON.parse(await fs.readFile(dataPath, "utf-8"));
+        const importMap = data?.settings?.premiumEmojiMap || data?.settings?.emojiMap;
+        
+        if (importMap && typeof importMap === "object") {
+          let count = 0;
+          for (const [emoji, id] of Object.entries(importMap)) {
+            await setPremiumEmoji(emoji, id as string);
+            count++;
+          }
+          await ctx.reply(`✅ Emoji mapping ${count} ခုကို bot-data.json မှ import လုပ်ပြီးပါပြီ ✨`, { parse_mode: "HTML" });
+        } else {
+          await ctx.reply("⚠️ bot-data.json ထဲတွင် mapping မတွေ့ပါ။", { parse_mode: "HTML" });
+        }
+      } catch (err) {
+        logger.error({ err }, "Failed to import premium emojis");
+        await ctx.reply("❌ Import လုပ်ရာတွင် အမှားအယွင်းရှိပါသည်။ (File မတွေ့ပါ သို့မဟုတ် format မမှန်ပါ)", { parse_mode: "HTML" });
+      }
+      return;
+    }
+
     // ── list ──
     if (arg.length === 0) {
       const map = getPremiumEmojiMap();
@@ -249,6 +274,7 @@ export async function createBot() {
         `\n\n━━━━━━━━━━━━━━━━━━━━━━\n` +
         `📌 <b>Commands:</b>\n` +
         `<code>/premium</code>\n→ အသစ်ထည့်ရန် စတင်မည်\n\n` +
+        `<code>/premium import</code>\n→ bot-data.json မှ mapping များ import လုပ်မည်\n\n` +
         `<code>/premium remove 👛</code>\n→ emoji တစ်ခု ဖျက်\n\n` +
         `<code>/premium clear</code>\n→ mapping အကုန် ဖျက်\n\n` +
         `💡 Custom emoji ID ရယူရန်:\nBot ဆီ animated emoji တစ်ခု ပို့ပါ → ID အလိုအလျောက် ပြပေးမည်`;
