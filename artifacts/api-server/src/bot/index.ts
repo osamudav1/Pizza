@@ -699,14 +699,27 @@ export async function createBot() {
       const targetType = svc?.targetType ||
         (svc?.id === "dia" ? "dia" : "uc");
 
-      // Save player ID, ask for server ID next (always for UC and Dia as requested)
-      ctx.session.collectedPlayerId = text;
-      ctx.session.step = "v2_waiting_server_id";
-      await ctx.reply(
-        `✅ ${bs("Game ID")}: <code>${escHtml(text)}</code>\n\n` +
-        `📋 <b>${bs("Server ID")}</b> ရိုက်ထည့်ပါ:\n<i>ဥပမာ: 1234</i>`,
-        { parse_mode: "HTML" }
-      );
+      if (targetType === "dia") {
+        // Diamonds — ask for server ID next
+        ctx.session.collectedPlayerId = text;
+        ctx.session.step = "v2_waiting_server_id";
+        await ctx.reply(
+          `✅ ${bs("Game ID")}: <code>${escHtml(text)}</code>\n\n` +
+          `📋 <b>${bs("Server ID")}</b> ရိုက်ထည့်ပါ:\n<i>ဥပမာ: 1234</i>`,
+          { parse_mode: "HTML" }
+        );
+      } else {
+        // UC — Game ID is enough, go straight to receipt
+        await updateOrder(ctx.session.pendingOrderId, { targetInfo: `Game ID: ${text}` });
+        ctx.session.step = "waiting_receipt";
+        const kpayInfo = `💳 <b>${bs("KPay / Wave")} နံပါတ်:</b> <code>${escHtml(KPAY_NUMBER!)}</code>`;
+        await ctx.reply(
+          `✅ ${bs("Game ID")}: <code>${escHtml(text)}</code>\n\n` +
+          kpayInfo + `\n\n` +
+          `📸 <b>${bs("KPay/Wave")} ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`,
+          { parse_mode: "HTML" }
+        );
+      }
       return;
     }
 
