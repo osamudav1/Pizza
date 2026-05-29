@@ -87,6 +87,67 @@ function escHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+/**
+ * Converts a telegram message with entities into an HTML string.
+ */
+function messageToHtml(text: string, entities: any[] = []): string {
+  if (!entities || entities.length === 0) return escHtml(text);
+
+  let html = "";
+  let lastOffset = 0;
+
+  // Sort entities by offset
+  const sortedEntities = [...entities].sort((a, b) => a.offset - b.offset);
+
+  for (const entity of sortedEntities) {
+    // Add text before the entity
+    html += escHtml(text.substring(lastOffset, entity.offset));
+
+    const entityText = text.substring(entity.offset, entity.offset + entity.length);
+    const escapedEntityText = escHtml(entityText);
+
+    switch (entity.type) {
+      case "bold":
+        html += `<b>${escapedEntityText}</b>`;
+        break;
+      case "italic":
+        html += `<i>${escapedEntityText}</i>`;
+        break;
+      case "code":
+        html += `<code>${escapedEntityText}</code>`;
+        break;
+      case "pre":
+        html += `<pre>${escapedEntityText}</pre>`;
+        break;
+      case "underline":
+        html += `<u>${escapedEntityText}</u>`;
+        break;
+      case "strikethrough":
+        html += `<s>${escapedEntityText}</s>`;
+        break;
+      case "text_link":
+        html += `<a href="${entity.url}">${escapedEntityText}</a>`;
+        break;
+      case "url":
+        html += `<a href="${entityText}">${escapedEntityText}</a>`;
+        break;
+      case "mention":
+        html += `<a href="https://t.me/${entityText.substring(1)}">${escapedEntityText}</a>`;
+        break;
+      case "custom_emoji":
+        html += `<tg-emoji emoji-id="${entity.custom_emoji_id}">${escapedEntityText}</tg-emoji>`;
+        break;
+      default:
+        html += escapedEntityText;
+    }
+    lastOffset = entity.offset + entity.length;
+  }
+
+  // Add remaining text
+  html += escHtml(text.substring(lastOffset));
+  return html;
+}
+
 export async function createBot() {
   logger.info("[Bot] createBot() — initializing...");
   const bot = new Bot<MyContext>(BOT_TOKEN!);
@@ -336,10 +397,9 @@ export async function createBot() {
     // New-style: service has a catalog photo/caption set by owner
     if (svc.photo || svc.caption) {
       const rawCap = svc.caption || escHtml(svc.name);
-      const captionHtml = rawCap.includes("<") ? rawCap : rawCap
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+      // If it already contains HTML tags, use it as is.
+      // Otherwise, escape it (though messageToHtml already escapes).
+      const captionHtml = (rawCap.includes("<") && rawCap.includes(">")) ? rawCap : escHtml(rawCap);
       
       try {
         if (svc.photo) {
@@ -698,9 +758,13 @@ export async function createBot() {
       }
 
       if (ctx.session.welcome_media_step === "waiting_caption") {
-        const text = ctx.message && "text" in ctx.message ? ctx.message.text?.trim() : "";
+        const msg = ctx.message;
+        const text = msg && "text" in msg ? msg.text : "";
+        const entities = msg && "entities" in msg ? msg.entities : [];
+        
         if (text) {
-          await setWelcomeMedia({ caption: text });
+          const htmlCaption = messageToHtml(text, entities);
+          await setWelcomeMedia({ caption: htmlCaption });
           ctx.session.welcome_media_step = undefined;
           await ctx.reply(`✅ Welcome Media အားလုံး ပြင်ဆင်ပြီးပါပြီ ✨`, { reply_markup: adminMenuKeyboard() });
         } else {
@@ -1458,9 +1522,11 @@ async function handleAdminInput(ctx: MyContext) {
     if (ctx.message && "photo" in ctx.message && ctx.message.photo) {
       const photos = ctx.message.photo;
       photo = photos[photos.length - 1].file_id;
-      caption = ctx.message.caption;
-    } else if (text) {
-      caption = text;
+      if (ctx.message.caption) {
+        caption = messageToHtml(ctx.message.caption, ctx.message.caption_entities);
+      }
+    } else if (ctx.message && "text" in ctx.message && ctx.message.text) {
+      caption = messageToHtml(ctx.message.text, ctx.message.entities);
     }
 
     if (photo || caption) {
