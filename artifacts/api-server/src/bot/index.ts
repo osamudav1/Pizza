@@ -514,7 +514,7 @@ export async function createBot() {
       buyKb = contactOwnerKeyboard();
     } else if (targetType === "general") {
       ctx.session.step = "waiting_target";
-      buyText = orderHeader + `📋 ${bs("Target Info")} (username, link, etc.) ရိုက်ထည့်ပါ:`;
+      buyText = orderHeader + `📋 ${bs("မှတ်ချက်ရေးရန် - ဝယ်ယူလိုသော service ကိုရေးပို့ပါ:")}`;
     } else {
       ctx.session.step = "waiting_receipt";
       buyText = formatOrderSummary({
@@ -572,7 +572,7 @@ export async function createBot() {
       ctx.session.step = "waiting_target";
       buySvcText = `📦 <b>${escHtml(svc.name)}</b>\n\n` +
         kpayInfo + `\n\n` +
-        `📋 ${bs("Target Info")} (username, link, etc.) ရိုက်ထည့်ပါ:`;
+        `📋 ${bs("မှတ်ချက်ရေးရန် - ဝယ်ယူလိုသော service ကိုရေးပို့ပါ:")}`;
     }
 
     try {
@@ -808,14 +808,19 @@ export async function createBot() {
       const order = await getOrder(ctx.session.pendingOrderId);
       if (!order) return;
 
+      // If it's a general service, we show targetInfo as the package label
+      const services = await getServices();
+      const svc = services.find(s => s.id === order.serviceId);
+      const isGeneral = !svc?.targetType || svc.targetType === "general";
+      
       await ctx.reply(
         formatOrderSummary({
           orderId: order.orderId,
           serviceName: order.serviceName,
-          itemLabel: order.itemLabel,
+          itemLabel: isGeneral ? targetInfo : order.itemLabel,
           price: order.itemPrice,
           unit: "ks",
-          targetInfo,
+          targetInfo: isGeneral ? undefined : targetInfo,
         }) +
           `\n\n💳 <b>${bs("KPay / Wave")} နံပါတ်:</b> <code>${KPAY_NUMBER}</code>\n\n` +
           `📸 ငွေလွှဲပြေစာ ဓာတ်ပုံ (သို့မဟုတ်) ${bs("screenshot")} ကို ဤနေရာတွင် ပို့ပေးပါ`,
@@ -851,16 +856,20 @@ export async function createBot() {
       );
       await updateOrder(order.orderId, { messageId: waitMsg.message_id });
 
+      const services = await getServices();
+      const svc = services.find(s => s.id === order.serviceId);
+      const isGeneral = !svc?.targetType || svc.targetType === "general";
+
       const ownerNotifText = formatReceiptNotification({
         orderId: order.orderId,
         userId: order.userId,
         username: order.username,
         firstName: order.firstName,
         serviceName: order.serviceName,
-        itemLabel: order.itemLabel,
+        itemLabel: isGeneral ? (order.targetInfo || order.itemLabel) : order.itemLabel,
         price: order.itemPrice,
         unit: "ks",
-        targetInfo: order.targetInfo,
+        targetInfo: isGeneral ? undefined : order.targetInfo,
       });
 
       if (receiptFileId && GROUP_CHAT_ID) {
@@ -895,11 +904,15 @@ export async function createBot() {
       const order = await getOrder(ctx.session.pendingOrderId);
       if (!order) return;
 
+      const services = await getServices();
+      const svc = services.find(s => s.id === order.serviceId);
+      const isGeneral = !svc?.targetType || svc.targetType === "general";
+
       const doneCaption =
         `✨ <b>${bs("Order Completed!")}</b>\n\n` +
         `🆔 ${bs("Order ID")}: <code>${escHtml(order.orderId)}</code>\n` +
         `📦 ${bs("Service")}: ${escHtml(order.serviceName)}\n` +
-        `🎯 ${bs("Package")}: ${escHtml(order.itemLabel)}\n`;
+        `🎯 ${bs("Package")}: ${escHtml(isGeneral ? (order.targetInfo || order.itemLabel) : order.itemLabel)}\n`;
 
       if (ctx.message && "photo" in ctx.message && ctx.message.photo) {
         const photos = ctx.message.photo;
