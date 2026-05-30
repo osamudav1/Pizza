@@ -564,7 +564,7 @@ export async function createBot() {
     const targetType = svc.targetType ||
       (svc.id === "uc" ? "uc" : svc.id === "dia" ? "dia" : "general");
 
-    const kpayInfo = `💳 <b>${bs("KPay / Wave")} နံပါတ်:</b> <code>${escHtml(KPAY_NUMBER!)}</code>`;
+    const kpayInfo = `👾<b>Kpay - 09771351671 [PKKA]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
     const orderHeader =
       `📦 ${bs("Service")}: <b>${escHtml(svc.name)}</b>\n` +
       `🎯 ${bs("Package")}: ${escHtml(item.label)}\n` +
@@ -641,7 +641,7 @@ export async function createBot() {
     await saveOrder(order);
     ctx.session.pendingOrderId = orderId;
 
-    const kpayInfo = `💳 <b>${bs("KPay / Wave")} နံပါတ်:</b> <code>${escHtml(KPAY_NUMBER!)}</code>`;
+    const kpayInfo = `👾<b>Kpay - 09771351671 [PKKA]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
     const targetType = svc.targetType || "general";
 
     let buySvcText = "";
@@ -851,7 +851,7 @@ export async function createBot() {
         // UC — Game ID is enough, go straight to receipt
         await updateOrder(ctx.session.pendingOrderId, { targetInfo: `Game ID: ${text}` });
         ctx.session.step = "waiting_receipt";
-        const kpayInfo = `💳 <b>${bs("KPay / Wave")} နံပါတ်:</b> <code>${escHtml(KPAY_NUMBER!)}</code>`;
+        const kpayInfo = `👾<b>Kpay - 09771351671 [PKKA]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
         await ctx.reply(
           `✅ ${bs("Game ID")}: <code>${escHtml(text)}</code>\n\n` +
           kpayInfo + `\n\n` +
@@ -872,7 +872,7 @@ export async function createBot() {
       });
       ctx.session.step = "waiting_receipt";
       ctx.session.collectedPlayerId = undefined;
-      const kpayInfo = `💳 <b>${bs("KPay / Wave")} နံပါတ်:</b> <code>${escHtml(KPAY_NUMBER!)}</code>`;
+      const kpayInfo = `👾<b>Kpay - 09771351671 [PKKA]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
       await ctx.reply(
         `✅ <b>${bs("Game ID")}:</b> <code>${escHtml(playerId)} (${escHtml(text)})</code>\n\n` +
         kpayInfo + `\n\n` +
@@ -907,7 +907,7 @@ export async function createBot() {
           unit: "ks",
           targetInfo: isGeneral ? undefined : targetInfo,
         }) +
-          `\n\n💳 <b>${bs("KPay / Wave")} နံပါတ်:</b> <code>${KPAY_NUMBER}</code>\n\n` +
+          `\n\n👾<b>Kpay - 09771351671 [PKKA]</b>\n👻<b>Wave - 09697328391 [ZKK]</b>\n\n` +
           `📸 ငွေလွှဲပြေစာ ဓာတ်ပုံ (သို့မဟုတ်) ${bs("screenshot")} ကို ဤနေရာတွင် ပို့ပေးပါ`,
         { parse_mode: "HTML" }
       );

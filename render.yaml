@@ -18,7 +18,7 @@ services:
       - key: OWNER_CHAT_ID
         sync: false
       - key: KPAY_NUMBER
-        sync: false
+        value: "09771351671"
       - key: GROUP_CHAT_ID
         sync: false
       - key: MONGO_URI
