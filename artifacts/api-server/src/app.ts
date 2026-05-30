@@ -7,6 +7,10 @@ const app: Express = express();
 
 // Root-level ping endpoint for uptime monitoring (UptimeRobot etc.)
 // Define this BEFORE importing routes or other modules that might throw errors during initialization
+app.get("/", (_req, res) => {
+  res.json({ status: "ok", message: "Server is running", uptime: process.uptime() });
+});
+
 app.get("/ping", (_req, res) => {
   res.json({ status: "ok", uptime: process.uptime() });
 });
