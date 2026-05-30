@@ -243,10 +243,15 @@ export async function createBot() {
 
     try {
       if (welcome?.photo) {
-        await ctx.replyWithPhoto(welcome.photo, {
-          ...replyOptions,
-          caption,
-        });
+        try {
+          await ctx.replyWithPhoto(welcome.photo, {
+            ...replyOptions,
+            caption,
+          });
+        } catch (photoErr) {
+          logger.warn({ photoErr, userId: ctx.from?.id }, "[/start] Failed to send welcome photo, falling back to text");
+          await ctx.reply(caption, replyOptions);
+        }
       } else {
         await ctx.reply(caption, replyOptions);
       }
@@ -403,14 +408,22 @@ export async function createBot() {
       
       try {
         if (svc.photo) {
-          await ctx.editMessageMedia({
-            type: "photo",
-            media: svc.photo,
-            caption: captionHtml,
-            parse_mode: "HTML",
-          }, {
-            reply_markup: servicePageKeyboard(svc),
-          });
+          try {
+            await ctx.editMessageMedia({
+              type: "photo",
+              media: svc.photo,
+              caption: captionHtml,
+              parse_mode: "HTML",
+            }, {
+              reply_markup: servicePageKeyboard(svc),
+            });
+          } catch (mediaErr) {
+            logger.warn({ mediaErr, svcId: svc.id }, "[svc] Failed to edit media, falling back to text-only edit");
+            await ctx.editMessageText(captionHtml, {
+              parse_mode: "HTML",
+              reply_markup: servicePageKeyboard(svc),
+            });
+          }
         } else {
           await ctx.editMessageText(captionHtml, {
             parse_mode: "HTML",
@@ -421,11 +434,19 @@ export async function createBot() {
         // If edit fails (e.g. message doesn't have media but we try to edit media), fallback to delete and reply
         try { await ctx.deleteMessage(); } catch {}
         if (svc.photo) {
-          await ctx.replyWithPhoto(svc.photo, {
-            caption: captionHtml,
-            parse_mode: "HTML",
-            reply_markup: servicePageKeyboard(svc),
-          });
+          try {
+            await ctx.replyWithPhoto(svc.photo, {
+              caption: captionHtml,
+              parse_mode: "HTML",
+              reply_markup: servicePageKeyboard(svc),
+            });
+          } catch (photoErr) {
+            logger.warn({ photoErr, svcId: svc.id }, "[svc] Failed to reply with photo, falling back to text");
+            await ctx.reply(captionHtml, {
+              parse_mode: "HTML",
+              reply_markup: servicePageKeyboard(svc),
+            });
+          }
         } else {
           await ctx.reply(captionHtml, {
             parse_mode: "HTML",
