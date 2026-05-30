@@ -79,10 +79,6 @@ const OWNER_CHAT_ID = process.env["OWNER_CHAT_ID"] || "";
 const KPAY_NUMBER = process.env["KPAY_NUMBER"] || "";
 const GROUP_CHAT_ID = process.env["GROUP_CHAT_ID"] || "";
 
-if (!BOT_TOKEN) {
-  throw new Error("BOT_TOKEN environment variable is required");
-}
-
 function escHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -150,7 +146,11 @@ function messageToHtml(text: string, entities: any[] = []): string {
 
 export async function createBot() {
   logger.info("[Bot] createBot() — initializing...");
-  const bot = new Bot<MyContext>(BOT_TOKEN!);
+  if (!BOT_TOKEN) {
+    logger.error("BOT_TOKEN environment variable is missing. Bot will not start.");
+    throw new Error("BOT_TOKEN environment variable is required");
+  }
+  const bot = new Bot<MyContext>(BOT_TOKEN);
 
   // ─── Load premium emojis from DB into in-memory map ─────────
   logger.info("[Bot] Loading premium emojis from DB...");
