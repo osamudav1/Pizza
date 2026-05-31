@@ -898,17 +898,16 @@ export async function createBot() {
       const svc = services.find(s => s.id === order.serviceId);
       const isGeneral = !svc?.targetType || svc.targetType === "general";
       
+      const kpayInfo = `👾<b>Kpay - 09771351671 [PKKA]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
+      const orderHeader = 
+        `📦 ${bs("Service")}: <b>${escHtml(order.serviceName)}</b>\n` +
+        `🎯 ${bs("Package")}: ${escHtml(isGeneral ? targetInfo : order.itemLabel)}\n` +
+        `💰 ငွေပမာဏ: <b>${order.itemPrice.toLocaleString()} ks</b>\n\n`;
+
       await ctx.reply(
-        formatOrderSummary({
-          orderId: order.orderId,
-          serviceName: order.serviceName,
-          itemLabel: isGeneral ? targetInfo : order.itemLabel,
-          price: order.itemPrice,
-          unit: "ks",
-          targetInfo: isGeneral ? undefined : targetInfo,
-        }) +
-          `\n\n👾<b>Kpay - 09771351671 [PKKA]</b>\n👻<b>Wave - 09697328391 [ZKK]</b>\n\n` +
-          `📸 ငွေလွှဲပြေစာ ဓာတ်ပုံ (သို့မဟုတ်) ${bs("screenshot")} ကို ဤနေရာတွင် ပို့ပေးပါ`,
+        orderHeader +
+          kpayInfo + `\n\n` +
+          `📸 <b>${bs("KPay/Wave")} ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`,
         { parse_mode: "HTML" }
       );
       return;
