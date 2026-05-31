@@ -595,7 +595,7 @@ export async function createBot() {
       buyKb = contactOwnerKeyboard();
     } else if (targetType === "general") {
       ctx.session.step = "waiting_target";
-      buyText = orderHeader + `📋 ${bs("မှတ်ချက်ရေးရန် - ဝယ်ယူလိုသော service ကိုရေးပို့ပါ:")}`;
+      buyText = orderHeader + `📋 ဝယ်ယူလိုသော Service နှင့် လင့်တွဲပို့ပေးပါ ပီးpush ပေး`;
     } else {
       ctx.session.step = "waiting_receipt";
       buyText = formatOrderSummary({
@@ -653,7 +653,7 @@ export async function createBot() {
       ctx.session.step = "waiting_target";
       buySvcText = `📦 <b>${escHtml(svc.name)}</b>\n\n` +
         kpayInfo + `\n\n` +
-        `📋 ${bs("မှတ်ချက်ရေးရန် - ဝယ်ယူလိုသော service ကိုရေးပို့ပါ:")}`;
+        `📋 ဝယ်ယူလိုသော Service နှင့် လင့်တွဲပို့ပေးပါ ပီးpush ပေး`;
     }
 
     try {
