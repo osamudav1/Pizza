@@ -52,7 +52,7 @@ export function formatReceiptNotification(params: {
   msg += `🎯 <b>𝗣𝗮𝗰𝗸𝗮𝗴𝗲</b>: ${params.itemLabel}\n`;
   msg += `💰 <b>𝗔𝗺𝗼𝘂𝗻𝘁</b>: ${params.price.toLocaleString()} ks\n`;
   msg += `━━━━━━━━━━━━━━━━\n`;
-  msg += `⏳ စစ်ဆေးပြီး 𝗰𝗼𝗻𝗳𝗶𝗿𝗺 လုပ်ပေးပါ`;
+  // msg += `⏳ စစ်ဆေးပြီး 𝗰𝗼𝗻𝗳𝗶𝗿𝗺 လုပ်ပေးပါ`;
   // Footer removed as per user request
   return msg;
 }
