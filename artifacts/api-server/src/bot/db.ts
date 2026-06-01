@@ -51,7 +51,7 @@ async function ensureDefaults() {
     const defaultServices = [
       {
         id: "tg_boost",
-        name: "🚀 Telegram Boost",
+        name: "📦 ⚡️Telegram Boosts ⚡️",
         category: "main",
         items: [
           { id: "tg_boost_1k", label: "1,000 Subscribers", price: 7000, unit: "ks" },
@@ -92,13 +92,40 @@ async function ensureDefaults() {
       },
       {
         id: "uc",
-        name: "🎮 UC (PUBG)",
+        name: "🎮 PUBG(UC)",
         category: "main",
         targetType: "uc",
+        orgPrices: {
+          "60": 3950,
+          "120": 7950,
+          "180": 12800,
+          "240": 17400,
+          "325": 21700,
+          "385": 25600,
+          "660": 43700,
+          "720": 47600,
+          "985": 64700,
+          "1320": 86700,
+          "1800": 105700,
+          "2460": 150600,
+          "3850": 216600,
+          "8100": 409000
+        },
         items: [
-          { id: "uc_60", label: "60 UC", price: 1500, unit: "ks" },
-          { id: "uc_325", label: "325 UC", price: 7000, unit: "ks" },
-          { id: "uc_660", label: "660 UC", price: 13000, unit: "ks" },
+          { id: "uc_60", label: "60 UC", price: 3950, unit: "ks" },
+          { id: "uc_120", label: "120 UC", price: 7950, unit: "ks" },
+          { id: "uc_180", label: "180 UC", price: 12800, unit: "ks" },
+          { id: "uc_240", label: "240 UC", price: 17400, unit: "ks" },
+          { id: "uc_325", label: "325 UC", price: 21700, unit: "ks" },
+          { id: "uc_385", label: "385 UC", price: 25600, unit: "ks" },
+          { id: "uc_660", label: "660 UC", price: 43700, unit: "ks" },
+          { id: "uc_720", label: "720 UC", price: 47600, unit: "ks" },
+          { id: "uc_985", label: "985 UC", price: 64700, unit: "ks" },
+          { id: "uc_1320", label: "1320 UC", price: 86700, unit: "ks" },
+          { id: "uc_1800", label: "1800 UC", price: 105700, unit: "ks" },
+          { id: "uc_2460", label: "2460 UC", price: 150600, unit: "ks" },
+          { id: "uc_3850", label: "3850 UC", price: 216600, unit: "ks" },
+          { id: "uc_8100", label: "8100 UC", price: 409000, unit: "ks" },
         ],
       },
       {

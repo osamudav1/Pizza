@@ -631,7 +631,7 @@ export async function createBot() {
       ctx.session.pendingOrderId = undefined;
       buyText = `📞 <b>${escHtml(item.label)}</b>\n\nဤ service အတွက် owner ထံ တိုက်ရိုက်ဆက်သွယ်ပေးပါ`;
       buyKb = contactOwnerKeyboard();
-    } else if (targetType === "general") {
+    } else if (targetType === "general" || svc.id === "tg_boost") {
       ctx.session.step = "waiting_target";
       buyText = orderHeader + `📋 ဝယ်ယူလိုသော Service နှင့် လင့်တွဲပို့ပေးပါ`;
     } else {
@@ -687,6 +687,11 @@ export async function createBot() {
       ctx.session.step = "v2_waiting_amount";
       buySvcText = `${targetType === "uc" ? "🎮" : "💎"} <b>${escHtml(svc.name)}</b>\n\n` +
         `💰 ဝယ်ယူမည့် <b>${bs("Amount")}</b> ကို ရိုက်ထည့်ပါ:\n<i>ဥပမာ: 1000</i>`;
+    } else if (svc.id === "tg_boost") {
+      ctx.session.step = "waiting_target";
+      buySvcText = `📦 <b>${escHtml(svc.name)}</b>\n\n` +
+        kpayInfo + `\n\n` +
+        `📋 ဝယ်ယူလိုသော Service နှင့် လင့်တွဲပို့ပေးပါ`;
     } else {
       ctx.session.step = "waiting_target";
       buySvcText = `📦 <b>${escHtml(svc.name)}</b>\n\n` +
@@ -850,15 +855,45 @@ export async function createBot() {
       await updateOrder(ctx.session.pendingOrderId, updates);
       ctx.session.step = "v2_waiting_player_id";
 
-      const priceText = orgPrice !== undefined
-        ? `\n💰 ကျသင့်ငွေ: <b>${orgPrice.toLocaleString()} ks</b>`
-        : "";
+      let priceText = "";
+      if (orgPrice !== undefined) {
+        priceText = `\n💰 ကျသင့်ငွေ: <b>${orgPrice.toLocaleString()} ks</b>`;
+      } else if (svc?.id === "uc") {
+        // Fallback for UC: ask for amount if not in orgPrices
+        ctx.session.step = "v2_waiting_custom_price";
+        await ctx.reply(
+          `✅ Package: <b>${escHtml(text)}</b>\n\n` +
+          `💰 ကျသင့်ငွေပမာဏ ရိုက်ပို့ပေးပါ:`,
+          { parse_mode: "HTML" }
+        );
+        return;
+      }
 
       const packageLabel = text;
       await updateOrder(ctx.session.pendingOrderId, { itemLabel: packageLabel });
 
       await ctx.reply(
         `✅ Package: <b>${escHtml(text)}</b>${priceText}\n\n` +
+        `📋 <b>${bs("Game ID")}</b> ရိုက်ထည့်ပါ:`,
+        { parse_mode: "HTML" }
+      );
+      return;
+    }
+
+    // ── User flow: v2 — waiting Custom Price (UC) ──
+    if (ctx.session.step === "v2_waiting_custom_price" && ctx.session.pendingOrderId) {
+      const text = ctx.message && "text" in ctx.message ? ctx.message.text?.trim() : "";
+      if (!text) return;
+      const price = parseInt(text.replace(/,/g, ""));
+      if (isNaN(price)) {
+        await ctx.reply("❌ ကျေးဇူးပြု၍ ကျသင့်ငွေ (နံပါတ်) ကိုသာ ရိုက်ပို့ပေးပါ");
+        return;
+      }
+
+      await updateOrder(ctx.session.pendingOrderId, { itemPrice: price });
+      ctx.session.step = "v2_waiting_player_id";
+      await ctx.reply(
+        `💰 ကျသင့်ငွေ: <b>${price.toLocaleString()} ks</b>\n\n` +
         `📋 <b>${bs("Game ID")}</b> ရိုက်ထည့်ပါ:`,
         { parse_mode: "HTML" }
       );
