@@ -636,7 +636,7 @@ export async function createBot() {
       buyText = orderHeader + `📋 ဝယ်ယူလိုသော Service နှင့် လင့်တွဲပို့ပေးပါ`;
     } else if (svc.id === "tg_boost") {
       ctx.session.step = "waiting_target";
-      buyText = orderHeader + `📢 ${bs("Channel/Group username")} ပေးပို့ပါ\n<code>(ဥပမာ: @mychannel)</code>`;
+      buyText = orderHeader + `📋 ဝယ်ယူလိုသော Service နှင့် လင့်တွဲပို့ပေးပါ`;
     } else {
       ctx.session.step = "waiting_receipt";
       buyText = formatOrderSummary({
@@ -849,32 +849,43 @@ export async function createBot() {
       const normalizedAmt = text.replace(/[,\s]/g, "");
       const orgPrice = svc?.orgPrices?.[normalizedAmt];
       const updates: any = { quantity: text };
-      if (orgPrice !== undefined) updates.itemPrice = orgPrice;
-      await updateOrder(ctx.session.pendingOrderId, updates);
-      ctx.session.step = "v2_waiting_player_id";
-
-      let priceText = "";
+      
       if (orgPrice !== undefined) {
-        priceText = `\n💰 ကျသင့်ငွေ: <b>${orgPrice.toLocaleString()} ks</b>`;
+        updates.itemPrice = orgPrice;
+        await updateOrder(ctx.session.pendingOrderId, updates);
+        ctx.session.step = "v2_waiting_player_id";
+        
+        const packageLabel = text;
+        await updateOrder(ctx.session.pendingOrderId, { itemLabel: packageLabel });
+
+        await ctx.reply(
+          `✅ Package: <b>${escHtml(text)}</b>\n💰 ကျသင့်ငွေ: <b>${orgPrice.toLocaleString()} ks</b>\n\n` +
+          `📋 <b>${bs("Game ID")}</b> ရိုက်ထည့်ပါ:`,
+          { parse_mode: "HTML" }
+        );
       } else if (svc?.id === "uc") {
         // Fallback for UC: ask for amount if not in orgPrices
+        await updateOrder(ctx.session.pendingOrderId, updates);
         ctx.session.step = "v2_waiting_custom_price";
         await ctx.reply(
           `✅ Package: <b>${escHtml(text)}</b>\n\n` +
           `💰 ကျသင့်ငွေပမာဏ ရိုက်ပို့ပေးပါ:`,
           { parse_mode: "HTML" }
         );
-        return;
+      } else {
+        // For other services (like Diamonds) if not in orgPrices, just proceed to Player ID
+        await updateOrder(ctx.session.pendingOrderId, updates);
+        ctx.session.step = "v2_waiting_player_id";
+        
+        const packageLabel = text;
+        await updateOrder(ctx.session.pendingOrderId, { itemLabel: packageLabel });
+
+        await ctx.reply(
+          `✅ Package: <b>${escHtml(text)}</b>\n\n` +
+          `📋 <b>${bs("Game ID")}</b> ရိုက်ထည့်ပါ:`,
+          { parse_mode: "HTML" }
+        );
       }
-
-      const packageLabel = text;
-      await updateOrder(ctx.session.pendingOrderId, { itemLabel: packageLabel });
-
-      await ctx.reply(
-        `✅ Package: <b>${escHtml(text)}</b>${priceText}\n\n` +
-        `📋 <b>${bs("Game ID")}</b> ရိုက်ထည့်ပါ:`,
-        { parse_mode: "HTML" }
-      );
       return;
     }
 

@@ -51,7 +51,7 @@ async function ensureDefaults() {
     const defaultServices = [
       {
         id: "tg_boost",
-        name: "🚀 Telegram Boost",
+        name: "📦 ⚡️Telegram Boosts ⚡️",
         category: "main",
         items: [
           { id: "tg_boost_1k", label: "1,000 Subscribers", price: 7000, unit: "ks" },
