@@ -631,9 +631,12 @@ export async function createBot() {
       ctx.session.pendingOrderId = undefined;
       buyText = `📞 <b>${escHtml(item.label)}</b>\n\nဤ service အတွက် owner ထံ တိုက်ရိုက်ဆက်သွယ်ပေးပါ`;
       buyKb = contactOwnerKeyboard();
-    } else if (targetType === "general" || svc.id === "tg_boost") {
+    } else if (targetType === "general") {
       ctx.session.step = "waiting_target";
       buyText = orderHeader + `📋 ဝယ်ယူလိုသော Service နှင့် လင့်တွဲပို့ပေးပါ`;
+    } else if (svc.id === "tg_boost") {
+      ctx.session.step = "waiting_target";
+      buyText = orderHeader + `📢 ${bs("Channel/Group username")} ပေးပို့ပါ\n<code>(ဥပမာ: @mychannel)</code>`;
     } else {
       ctx.session.step = "waiting_receipt";
       buyText = formatOrderSummary({
@@ -687,11 +690,6 @@ export async function createBot() {
       ctx.session.step = "v2_waiting_amount";
       buySvcText = `${targetType === "uc" ? "🎮" : "💎"} <b>${escHtml(svc.name)}</b>\n\n` +
         `💰 ဝယ်ယူမည့် <b>${bs("Amount")}</b> ကို ရိုက်ထည့်ပါ:\n<i>ဥပမာ: 1000</i>`;
-    } else if (svc.id === "tg_boost") {
-      ctx.session.step = "waiting_target";
-      buySvcText = `📦 <b>${escHtml(svc.name)}</b>\n\n` +
-        kpayInfo + `\n\n` +
-        `📋 ဝယ်ယူလိုသော Service နှင့် လင့်တွဲပို့ပေးပါ`;
     } else {
       ctx.session.step = "waiting_target";
       buySvcText = `📦 <b>${escHtml(svc.name)}</b>\n\n` +
