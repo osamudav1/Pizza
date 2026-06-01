@@ -1,4 +1,4 @@
-import { ServiceModel, OrderModel, WelcomeModel, PremiumEmojiModel, connectDB, IService, IOrder } from "./mongodb";
+import { ServiceModel, OrderModel, WelcomeModel, PremiumEmojiModel, UserModel, connectDB, IService, IOrder } from "./mongodb";
 import { logger } from "../lib/logger";
 
 export interface Service {
@@ -282,6 +282,26 @@ export async function setWelcomeMedia(updates: { photo?: string; caption?: strin
   } else {
     await WelcomeModel.create(updates);
   }
+}
+
+export async function trackUser(userId: number, username?: string, firstName?: string): Promise<boolean> {
+  await connectDB();
+  const existing = await UserModel.findOne({ userId });
+  if (!existing) {
+    await UserModel.create({
+      userId,
+      username,
+      firstName,
+      createdAt: new Date().toISOString()
+    });
+    return true; // New user
+  }
+  return false; // Existing user
+}
+
+export async function getTotalUserCount(): Promise<number> {
+  await connectDB();
+  return await UserModel.countDocuments();
 }
 
 export async function getPremiumEmojiTag(fallback = "⭐"): Promise<string> {

@@ -14,6 +14,8 @@ import {
   clearOrgPrices,
   getWelcomeMedia,
   setWelcomeMedia,
+  trackUser,
+  getTotalUserCount,
   type Order,
   type Service,
   type ServiceItem,
@@ -209,6 +211,26 @@ export async function createBot() {
       return;
     }
     ctx.session = {};
+
+    // Track user and notify owner if new
+    if (ctx.from) {
+      const isNew = await trackUser(ctx.from.id, ctx.from.username, ctx.from.first_name);
+      if (isNew && OWNER_CHAT_ID) {
+        const totalUsers = await getTotalUserCount();
+        const mention = ctx.from.username 
+          ? `@${ctx.from.username}` 
+          : `<a href="tg://user?id=${ctx.from.id}">${ctx.from.first_name}</a>`;
+        
+        const notification = `🆕 <b>New User Joined!</b>\n\n` +
+          `👤 <b>User:</b> ${mention}\n` +
+          `🆔 <b>ID:</b> <code>${ctx.from.id}</code>\n\n` +
+          `📊 <b>Total Users:</b> ${totalUsers}`;
+        
+        bot.api.sendMessage(OWNER_CHAT_ID, notification, { parse_mode: "HTML" }).catch(err => {
+          logger.error({ err, ownerId: OWNER_CHAT_ID }, "Failed to send new user notification to owner");
+        });
+      }
+    }
     
     logger.debug({ userId: ctx.from?.id }, "[/start] Fetching services and welcome media...");
     // Optimize: Fetch services and welcome media in parallel
@@ -284,6 +306,22 @@ export async function createBot() {
     await ctx.reply(
       `⚙️ <b>${bs("Admin Panel")}</b>\n\n${bs("Service")} များ စီမံခန့်ခွဲရန်:`,
       { parse_mode: "HTML", reply_markup: adminMenuKeyboard() }
+    );
+  });
+
+  // ─── /stats ───────────────────────────────────────────────
+  bot.command("stats", async (ctx) => {
+    if (ctx.chat.type !== "private") return;
+    if (!isOwner(ctx, OWNER_CHAT_ID)) {
+      await ctx.reply("❌ ခွင့်မပြုပါ");
+      return;
+    }
+    
+    const totalUsers = await getTotalUserCount();
+    await ctx.reply(
+      `📊 <b>${bs("Bot Statistics")}</b>\n\n` +
+      `👥 <b>Total Users:</b> ${totalUsers}`,
+      { parse_mode: "HTML" }
     );
   });
 

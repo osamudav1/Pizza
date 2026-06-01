@@ -99,10 +99,25 @@ const PremiumEmojiSchema: Schema = new Schema({
   emojiId: { type: String, required: true }
 });
 
+export interface IUser extends Document {
+  userId: number;
+  username?: string;
+  firstName?: string;
+  createdAt: string;
+}
+
+const UserSchema: Schema = new Schema({
+  userId: { type: Number, required: true, unique: true, index: true },
+  username: { type: String },
+  firstName: { type: String },
+  createdAt: { type: String, required: true }
+});
+
 export const ServiceModel = mongoose.model<IService>("Service", ServiceSchema);
 export const OrderModel = mongoose.model<IOrder>("Order", OrderSchema);
 export const WelcomeModel = mongoose.model<IWelcome>("Welcome", WelcomeSchema);
 export const PremiumEmojiModel = mongoose.model<IPremiumEmoji>("PremiumEmoji", PremiumEmojiSchema);
+export const UserModel = mongoose.model<IUser>("User", UserSchema);
 
 export async function connectDB() {
   const state = mongoose.connection.readyState;
