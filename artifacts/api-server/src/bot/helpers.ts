@@ -49,6 +49,9 @@ export function formatReceiptNotification(params: {
   msg += `🆔 <b>𝗨𝘀𝗲𝗿 𝗜𝗗</b>: <code>${params.userId}</code>\n`;
   msg += `🆔 <b>𝗢𝗿𝗱𝗲𝗿 𝗜𝗗</b>: <code>${params.orderId}</code>\n`;
   msg += `📦 <b>𝗦𝗲𝗿𝘃𝗶𝗰𝗲</b>: ${params.serviceName}\n`;
+  if (params.targetInfo) {
+    msg += `🎮 <b>𝗚𝗮𝗺𝗲 𝗜𝗗</b>: <code>${params.targetInfo}</code>\n`;
+  }
   msg += `🎯 <b>𝗣𝗮𝗰𝗸𝗮𝗴𝗲</b>: ${params.itemLabel}\n`;
   msg += `💰 <b>𝗔𝗺𝗼𝘂𝗻𝘁</b>: ${params.price.toLocaleString()} ks\n`;
   msg += `━━━━━━━━━━━━━━━━\n`;

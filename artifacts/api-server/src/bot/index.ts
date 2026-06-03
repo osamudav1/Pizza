@@ -689,7 +689,7 @@ export async function createBot() {
     if (targetType === "uc" || targetType === "dia") {
       ctx.session.step = "v2_waiting_amount";
       buySvcText = `${targetType === "uc" ? "🎮" : "💎"} <b>${escHtml(svc.name)}</b>\n\n` +
-        `💰 ဝယ်ယူမည့် <b>${bs("Amount")}</b> ကို ရိုက်ထည့်ပါ:\n<i>ဥပမာ: 1000</i>`;
+        `💰 ဝယ်ယူမည့် <b>${bs("Amount")}</b> ကို ရိုက်ထည့်ပါ:`;
     } else {
       ctx.session.step = "waiting_target";
       buySvcText = `📦 <b>${escHtml(svc.name)}</b>\n\n` +
@@ -863,26 +863,13 @@ export async function createBot() {
           `📋 <b>${bs("Game ID")}</b> ရိုက်ထည့်ပါ:`,
           { parse_mode: "HTML" }
         );
-      } else if (svc?.id === "uc") {
-        // Fallback for UC: ask for amount if not in orgPrices
+      } else {
+        // Always ask for price if not in orgPrices
         await updateOrder(ctx.session.pendingOrderId, updates);
         ctx.session.step = "v2_waiting_custom_price";
         await ctx.reply(
           `✅ Package: <b>${escHtml(text)}</b>\n\n` +
           `💰 ကျသင့်ငွေပမာဏ ရိုက်ပို့ပေးပါ:`,
-          { parse_mode: "HTML" }
-        );
-      } else {
-        // For other services (like Diamonds) if not in orgPrices, just proceed to Player ID
-        await updateOrder(ctx.session.pendingOrderId, updates);
-        ctx.session.step = "v2_waiting_player_id";
-        
-        const packageLabel = text;
-        await updateOrder(ctx.session.pendingOrderId, { itemLabel: packageLabel });
-
-        await ctx.reply(
-          `✅ Package: <b>${escHtml(text)}</b>\n\n` +
-          `📋 <b>${bs("Game ID")}</b> ရိုက်ထည့်ပါ:`,
           { parse_mode: "HTML" }
         );
       }
@@ -931,7 +918,7 @@ export async function createBot() {
         );
       } else {
         // UC — Game ID is enough, go straight to receipt
-        await updateOrder(ctx.session.pendingOrderId, { targetInfo: `Game ID: ${text}` });
+        await updateOrder(ctx.session.pendingOrderId, { targetInfo: `${text}` });
         ctx.session.step = "waiting_receipt";
         const kpayInfo = `👾<b>Kpay - 09771351671 [PKKA]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
         await ctx.reply(
@@ -950,7 +937,7 @@ export async function createBot() {
       if (!text) return;
       const playerId = ctx.session.collectedPlayerId || "?";
       await updateOrder(ctx.session.pendingOrderId, {
-        targetInfo: `Game ID: ${playerId} (${text})`,
+        targetInfo: `${playerId} (${text})`,
       });
       ctx.session.step = "waiting_receipt";
       ctx.session.collectedPlayerId = undefined;
@@ -1032,10 +1019,10 @@ export async function createBot() {
         username: order.username,
         firstName: order.firstName,
         serviceName: order.serviceName,
-        itemLabel: isGeneral ? (order.targetInfo || order.itemLabel) : order.itemLabel,
+        itemLabel: order.itemLabel,
         price: order.itemPrice,
         unit: "ks",
-        targetInfo: isGeneral ? undefined : order.targetInfo,
+        targetInfo: order.targetInfo,
       });
 
       if (receiptFileId && GROUP_CHAT_ID) {
