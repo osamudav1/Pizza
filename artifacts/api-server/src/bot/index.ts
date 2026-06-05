@@ -618,8 +618,8 @@ export async function createBot() {
       ctx.session.step = "v2_waiting_player_id";
       buyText = orderHeader + `📋 <b>${bs("Game ID")}</b> ရိုက်ထည့်ပါ:`;
     } else if (svc.id === "tg_boost") {
-      ctx.session.step = "waiting_tg_boost_target";
-      buyText = orderHeader + `📋 ဝယ်ယူလိုသော ${bs("Service")} နှင့် လင့်တွဲပို့ပေးပါ\n\n<i>ဥပမာ: Myanmar Sub 1k - boost ပေးရမဲ့ လင့်</i>`;
+      ctx.session.step = "waiting_tg_boost_step1";
+      buyText = orderHeader + `📋 ဝယ်ယူလိုသော ${bs("Service")} နှင့် လင့်တွဲပို့ပေးပါ\n\n<i>ဥပမာ: Myanmar Sub 1k - boost ပေးရမဲ့လင့် တွဲပို့ပေးပါ အာ့အဆင့်ပီးမှ</i>`;
     } else if (svc.id === "tiktok") {
       ctx.session.step = "waiting_target";
       buyText = orderHeader + `🎵 ${bs("TikTok Post/Profile Link")} ပေးပို့ပါ`;
@@ -951,32 +951,30 @@ export async function createBot() {
       return;
     }
 
-    // ── User flow: Telegram Boost target ──
-    if (ctx.session.step === "waiting_tg_boost_target" && ctx.session.pendingOrderId) {
-      const targetInfo = ctx.message && "text" in ctx.message ? ctx.message.text : "";
-      if (!targetInfo) return;
+    // ── User flow: Telegram Boost Step 1 (Service & Link) ──
+    if (ctx.session.step === "waiting_tg_boost_step1" && ctx.session.pendingOrderId) {
+      const serviceLink = ctx.message && "text" in ctx.message ? ctx.message.text : "";
+      if (!serviceLink) return;
 
-      await updateOrder(ctx.session.pendingOrderId, { targetInfo });
-      ctx.session.step = "waiting_tg_boost_service";
+      await updateOrder(ctx.session.pendingOrderId, { targetInfo: serviceLink });
+      ctx.session.step = "waiting_tg_boost_step2";
 
       const order = await getOrder(ctx.session.pendingOrderId);
       if (!order) return;
 
-      const orderHeader = 
-        `📦 ${bs("Service")}: <b>${escHtml(order.serviceName)}</b>\n` +
-        `🎯 ${bs("Package")}: ${escHtml(order.itemLabel)}\n` +
-        `💰 ငွေပမာဏ: <b>${order.itemPrice.toLocaleString()} ks</b>\n\n`;
+      // Create the template message for step 2
+      const step2Message = 
+        `📦 <b>𝗦𝗲𝗿𝘃𝗶𝗰𝗲</b>: <b>${escHtml(order.serviceName)}</b>\n` +
+        `🎯 <b>𝗣𝗮𝗰𝗸𝗮𝗴𝗲</b>: ${escHtml(order.itemLabel)}\n\n` +
+        `📋 ဝယ်ယူလိုသော Service နှင့် လင့်တွဲပို့ပေးပါ\n\n` +
+        `<i>ဥပမာ: Myanmar Sub 1k - boost ပေးရမဲ့လင့် တွဲပို့ပေးပါ အာ့အဆင့်ပီးမှ</i>`;
 
-      await ctx.reply(
-        orderHeader +
-          `📋 ဝယ်ယူလိုသော ${bs("Service")} နှင့် လင့်တွဲပို့ပေးပါ\n\n<i>ဥပမာ: Myanmar Sub 1k - boost ပေးရမဲ့ လင့် တွဲပို့ပေးပါ အာ့အဆင့်ပီးမှ</i>`,
-        { parse_mode: "HTML" }
-      );
+      await ctx.reply(step2Message, { parse_mode: "HTML" });
       return;
     }
 
-    // ── User flow: Telegram Boost service details ──
-    if (ctx.session.step === "waiting_tg_boost_service" && ctx.session.pendingOrderId) {
+    // ── User flow: Telegram Boost Step 2 (Service Details) ──
+    if (ctx.session.step === "waiting_tg_boost_step2" && ctx.session.pendingOrderId) {
       const serviceDetails = ctx.message && "text" in ctx.message ? ctx.message.text : "";
       if (!serviceDetails) return;
 
@@ -986,18 +984,16 @@ export async function createBot() {
       const order = await getOrder(ctx.session.pendingOrderId);
       if (!order) return;
 
-      const kpayInfo = `👾<b>Kpay - 09771351671 [PKKA]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
-      const orderHeader = 
-        `📦 ${bs("Service")}: <b>${escHtml(order.serviceName)}</b>\n` +
-        `🎯 ${bs("Package")}: ${escHtml(order.itemLabel)}\n` +
-        `💰 ငွေပမာဏ: <b>${order.itemPrice.toLocaleString()} ks</b>\n\n`;
+      // Create the payment request message with proper formatting
+      const paymentMessage = 
+        `📦 <b>𝗦𝗲𝗿𝘃𝗶𝗰𝗲</b>: <b>${escHtml(order.serviceName)}</b>\n` +
+        `🎯 <b>𝗣𝗮𝗰𝗸𝗮𝗴𝗲</b>: ${escHtml(order.itemLabel)}\n` +
+        `💰 <b>ငွေပမာဏ</b>: <b>${order.itemPrice.toLocaleString()} ks</b>\n\n` +
+        `👾<b>Kpay - 09771351671 [PKKA]</b>\n\n` +
+        `👻<b>Wave - 09697328391 [ZKK]</b>\n\n` +
+        `📸 <b>𝗞𝗣𝗮𝘆/𝗪𝗮𝘃𝗲 ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`;
 
-      await ctx.reply(
-        orderHeader +
-          kpayInfo + `\n\n` +
-          `📸 <b>${bs("KPay/Wave")} ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`,
-        { parse_mode: "HTML" }
-      );
+      await ctx.reply(paymentMessage, { parse_mode: "HTML" });
       return;
     }
 
@@ -1032,7 +1028,7 @@ export async function createBot() {
       return;
     }
 
-    // ── User flow: Telegram Boost receipt ──
+    // ── User flow: Telegram Boost Receipt ──
     if (ctx.session.step === "waiting_tg_boost_receipt" && ctx.session.pendingOrderId) {
       const order = await getOrder(ctx.session.pendingOrderId);
       if (!order) return;
