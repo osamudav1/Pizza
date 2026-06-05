@@ -621,21 +621,18 @@ export async function createBot() {
       ctx.session.step = "waiting_tg_boost_step1";
       buyText = orderHeader + `📋 ဝယ်ယူလိုသော ${bs("Service")} နှင့် လင့်တွဲပို့ပေးပါ\n\n<i>ဥပမာ: Myanmar Sub 1k - boost ပေးရမဲ့လင့် တွဲပို့ပေးပါ အာ့အဆင့်ပီးမှ</i>`;
     } else if (svc.id === "tiktok") {
-      ctx.session.step = "waiting_target";
-      buyText = orderHeader + `🎵 ${bs("TikTok Post/Profile Link")} ပေးပို့ပါ`;
+      ctx.session.step = "waiting_general_step1";
+      buyText = orderHeader + `📋 ဝယ်ယူလိုသော ${bs("Service")} နှင့် လင့်တွဲပို့ပေးပါ\n\n<i>ဥပမာ: TikTok Post Link သို့မဟုတ် Profile Link</i>`;
     } else if (svc.id === "tg_star") {
-      ctx.session.step = "waiting_target";
-      buyText = orderHeader + `⭐ ${bs("Telegram username")} ပေးပို့ပါ\n<code>(ဥပမာ: @myusername)</code>`;
+      ctx.session.step = "waiting_general_step1";
+      buyText = orderHeader + `📋 ဝယ်ယူလိုသော ${bs("Service")} နှင့် လင့်တွဲပို့ပေးပါ\n\n<i>ဥပမာ: Telegram username သို့မဟုတ် Link</i>`;
     } else if (item.requireContact) {
       ctx.session.step = undefined;
       ctx.session.pendingOrderId = undefined;
       buyText = `📞 <b>${escHtml(item.label)}</b>\n\nဤ service အတွက် owner ထံ တိုက်ရိုက်ဆက်သွယ်ပေးပါ`;
       buyKb = contactOwnerKeyboard();
     } else if (targetType === "general") {
-      ctx.session.step = "waiting_target";
-      buyText = orderHeader + `📋 ဝယ်ယူလိုသော Service နှင့် လင့်တွဲပို့ပေးပါ`;
-    } else if (svc.id === "tg_boost") {
-      ctx.session.step = "waiting_target";
+      ctx.session.step = "waiting_general_step1";
       buyText = orderHeader + `📋 ဝယ်ယူလိုသော Service နှင့် လင့်တွဲပို့ပေးပါ`;
     } else {
       ctx.session.step = "waiting_receipt";
