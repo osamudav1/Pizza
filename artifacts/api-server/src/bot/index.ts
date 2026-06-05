@@ -618,8 +618,8 @@ export async function createBot() {
       ctx.session.step = "v2_waiting_player_id";
       buyText = orderHeader + `📋 <b>${bs("Game ID")}</b> ရိုက်ထည့်ပါ:`;
     } else if (svc.id === "tg_boost") {
-      ctx.session.step = "waiting_target";
-      buyText = orderHeader + `📢 ${bs("Channel/Group username")} ပေးပို့ပါ\n<code>(ဥပမာ: @mychannel)</code>`;
+      ctx.session.step = "waiting_tg_boost_target";
+      buyText = orderHeader + `📋 ဝယ်ယူလိုသော ${bs("Service")} နှင့် လင့်တွဲပို့ပေးပါ\n\n<i>ဥပမာ: Myanmar Sub 1k - boost ပေးရမဲ့ လင့်</i>`;
     } else if (svc.id === "tiktok") {
       ctx.session.step = "waiting_target";
       buyText = orderHeader + `🎵 ${bs("TikTok Post/Profile Link")} ပေးပို့ပါ`;
@@ -951,6 +951,56 @@ export async function createBot() {
       return;
     }
 
+    // ── User flow: Telegram Boost target ──
+    if (ctx.session.step === "waiting_tg_boost_target" && ctx.session.pendingOrderId) {
+      const targetInfo = ctx.message && "text" in ctx.message ? ctx.message.text : "";
+      if (!targetInfo) return;
+
+      await updateOrder(ctx.session.pendingOrderId, { targetInfo });
+      ctx.session.step = "waiting_tg_boost_service";
+
+      const order = await getOrder(ctx.session.pendingOrderId);
+      if (!order) return;
+
+      const orderHeader = 
+        `📦 ${bs("Service")}: <b>${escHtml(order.serviceName)}</b>\n` +
+        `🎯 ${bs("Package")}: ${escHtml(order.itemLabel)}\n` +
+        `💰 ငွေပမာဏ: <b>${order.itemPrice.toLocaleString()} ks</b>\n\n`;
+
+      await ctx.reply(
+        orderHeader +
+          `📋 ဝယ်ယူလိုသော ${bs("Service")} နှင့် လင့်တွဲပို့ပေးပါ\n\n<i>ဥပမာ: Myanmar Sub 1k - boost ပေးရမဲ့ လင့် တွဲပို့ပေးပါ အာ့အဆင့်ပီးမှ</i>`,
+        { parse_mode: "HTML" }
+      );
+      return;
+    }
+
+    // ── User flow: Telegram Boost service details ──
+    if (ctx.session.step === "waiting_tg_boost_service" && ctx.session.pendingOrderId) {
+      const serviceDetails = ctx.message && "text" in ctx.message ? ctx.message.text : "";
+      if (!serviceDetails) return;
+
+      await updateOrder(ctx.session.pendingOrderId, { quantity: serviceDetails });
+      ctx.session.step = "waiting_tg_boost_receipt";
+
+      const order = await getOrder(ctx.session.pendingOrderId);
+      if (!order) return;
+
+      const kpayInfo = `👾<b>Kpay - 09771351671 [PKKA]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
+      const orderHeader = 
+        `📦 ${bs("Service")}: <b>${escHtml(order.serviceName)}</b>\n` +
+        `🎯 ${bs("Package")}: ${escHtml(order.itemLabel)}\n` +
+        `💰 ငွေပမာဏ: <b>${order.itemPrice.toLocaleString()} ks</b>\n\n`;
+
+      await ctx.reply(
+        orderHeader +
+          kpayInfo + `\n\n` +
+          `📸 <b>${bs("KPay/Wave")} ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`,
+        { parse_mode: "HTML" }
+      );
+      return;
+    }
+
     // ── User flow: target info ──
     if (ctx.session.step === "waiting_target" && ctx.session.pendingOrderId) {
       const targetInfo = ctx.message && "text" in ctx.message ? ctx.message.text : "";
@@ -979,6 +1029,72 @@ export async function createBot() {
           `📸 <b>${bs("KPay/Wave")} ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`,
         { parse_mode: "HTML" }
       );
+      return;
+    }
+
+    // ── User flow: Telegram Boost receipt ──
+    if (ctx.session.step === "waiting_tg_boost_receipt" && ctx.session.pendingOrderId) {
+      const order = await getOrder(ctx.session.pendingOrderId);
+      if (!order) return;
+
+      let receiptFileId: string | undefined;
+      let receiptCaption: string | undefined;
+
+      if (ctx.message && "photo" in ctx.message && ctx.message.photo) {
+        const photos = ctx.message.photo;
+        receiptFileId = photos[photos.length - 1].file_id;
+        receiptCaption = ctx.message.caption || "";
+      } else if (ctx.message && "text" in ctx.message) {
+        receiptCaption = ctx.message.text;
+      }
+
+      await updateOrder(order.orderId, {
+        receiptFileId,
+        receiptCaption,
+        status: "pending_confirm",
+      });
+
+      const waitMsg = await ctx.reply(
+        `⏳ ပြေစာ စစ်ဆေးနေပါသည်...\n\nခဏလေး စောင့်ပေးပါ 🙏`,
+      );
+      await updateOrder(order.orderId, { messageId: waitMsg.message_id });
+
+      const ownerNotifText = formatReceiptNotification({
+        orderId: order.orderId,
+        userId: order.userId,
+        username: order.username,
+        firstName: order.firstName,
+        serviceName: order.serviceName,
+        itemLabel: order.itemLabel,
+        price: order.itemPrice,
+        unit: "ks",
+        targetInfo: order.targetInfo,
+      });
+
+      if (receiptFileId && GROUP_CHAT_ID) {
+        try {
+          await ctx.api.sendPhoto(GROUP_CHAT_ID, receiptFileId);
+        } catch (err) {
+          logger.warn({ err }, "Failed to forward receipt photo to group");
+        }
+      }
+
+      let ownerMsg;
+      if (receiptFileId) {
+        ownerMsg = await ctx.api.sendPhoto(ownerChatId, receiptFileId, {
+          caption: ownerNotifText,
+          parse_mode: "HTML",
+          reply_markup: ownerOrderKeyboard(order.orderId),
+        });
+      } else {
+        ownerMsg = await ctx.api.sendMessage(ownerChatId, ownerNotifText, {
+          parse_mode: "HTML",
+          reply_markup: ownerOrderKeyboard(order.orderId),
+        });
+      }
+
+      await updateOrder(order.orderId, { ownerMessageId: ownerMsg.message_id });
+      ctx.session = {};
       return;
     }
 
