@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web", "bash"]
+modules = ["nodejs-20", "web", "bash", "python-3.11"]
 
 [deployment]
 router = "application"
@@ -41,6 +41,10 @@ path = "scripts/post-merge.sh"
 timeoutMs = 20000
 
 [[ports]]
+localPort = 3000
+externalPort = 3000
+
+[[ports]]
 localPort = 8080
 externalPort = 8080
 
@@ -50,10 +54,6 @@ externalPort = 80
 
 [[ports]]
 localPort = 8082
-externalPort = 3000
-
-[[ports]]
-localPort = 3000
 externalPort = 3000
 
 [userenv]

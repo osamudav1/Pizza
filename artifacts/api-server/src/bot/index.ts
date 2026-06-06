@@ -717,7 +717,13 @@ export async function createBot() {
     const targetType = svc.targetType || "general";
 
     let buySvcText = "";
-    if (targetType === "uc" || targetType === "dia") {
+    if (svc.id === "tg_boost") {
+      ctx.session.step = "waiting_tg_boost_step1";
+      buySvcText =
+        `📦 <b>${escHtml(svc.name)}</b>\n\n` +
+        `📋 ဝယ်ယူလိုသော <b>Service</b> နှင့် <b>Link</b> တွဲပို့ပေးပါ\n\n` +
+        `<i>ဥပမာ: 1k Subscribers - https://t.me/yourchannel</i>`;
+    } else if (targetType === "uc" || targetType === "dia") {
       ctx.session.step = "v2_waiting_amount";
       buySvcText = `${targetType === "uc" ? "🎮" : "💎"} <b>${escHtml(svc.name)}</b>\n\n` +
         `💰 ဝယ်ယူမည့် <b>${bs("Amount")}</b> ကို ရိုက်ထည့်ပါ:`;
@@ -725,7 +731,7 @@ export async function createBot() {
       ctx.session.step = "waiting_target";
       buySvcText = `📦 <b>${escHtml(svc.name)}</b>\n\n` +
         kpayInfo + `\n\n` +
-        `📋 ဝယ်ယူလိုသော Service နှင့် လင့်တွဲပို့ပေးပါ`;
+        `📋 ဝယ်ယူလိုသော Service နှင့် လင့်တွဲပို့ပေးပါ`;
     }
 
     try {
