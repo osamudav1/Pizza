@@ -437,6 +437,40 @@ export async function createBot() {
     if (!svc) { await ctx.answerCallbackQuery(`${bs("Service")} မတွေ့ပါ`); return; }
     await ctx.answerCallbackQuery();
 
+    // ── Telegram Boost: skip item selection, go straight to link request ──
+    if (svc.id === "tg_boost") {
+      const orderId = generateOrderId();
+      const order: Order = {
+        orderId,
+        userId: ctx.from!.id,
+        username: ctx.from?.username,
+        firstName: ctx.from?.first_name,
+        serviceId: svc.id,
+        serviceName: svc.name,
+        itemId: "service",
+        itemLabel: svc.name,
+        itemPrice: 0,
+        status: "pending_receipt",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await saveOrder(order);
+      ctx.session.pendingOrderId = orderId;
+      ctx.session.step = "waiting_tg_boost_step1";
+
+      const boostText =
+        `📦 <b>${escHtml(svc.name)}</b>\n\n` +
+        `📋 ဝယ်ယူလိုသော <b>Service</b> နှင့် <b>Link</b> တွဲပို့ပေးပါ\n\n` +
+        `<i>ဥပမာ: 1k Subscribers - https://t.me/yourchannel</i>`;
+      try {
+        await ctx.editMessageText(boostText, { parse_mode: "HTML", reply_markup: new InlineKeyboard().add({ text: `🔙 ${bs("Back")}`, callback_data: "back:main" }) });
+      } catch {
+        try { await ctx.deleteMessage(); } catch {}
+        await ctx.reply(boostText, { parse_mode: "HTML", reply_markup: new InlineKeyboard().add({ text: `🔙 ${bs("Back")}`, callback_data: "back:main" }) });
+      }
+      return;
+    }
+
     // New-style: service has a catalog photo/caption set by owner
     if (svc.photo || svc.caption) {
       const rawCap = svc.caption || escHtml(svc.name);
@@ -954,19 +988,15 @@ export async function createBot() {
       if (!serviceLink) return;
 
       await updateOrder(ctx.session.pendingOrderId, { targetInfo: serviceLink });
-      ctx.session.step = "waiting_tg_boost_step2";
+      ctx.session.step = "waiting_tg_boost_receipt";
 
-      const order = await getOrder(ctx.session.pendingOrderId);
-      if (!order) return;
-
-      // Create the template message for step 2
-      const step2Message = 
-        `📦 <b>𝗦𝗲𝗿𝘃𝗶𝗰𝗲</b>: <b>${escHtml(order.serviceName)}</b>\n` +
-        `🎯 <b>𝗣𝗮𝗰𝗸𝗮𝗴𝗲</b>: ${escHtml(order.itemLabel)}\n\n` +
-        `📋 ဝယ်ယူလိုသော Service နှင့် လင့်တွဲပို့ပေးပါ\n\n` +
-        `<i>ဥပမာ: Myanmar Sub 1k - boost ပေးရမဲ့လင့် တွဲပို့ပေးပါ အာ့အဆင့်ပီးမှ</i>`;
-
-      await ctx.reply(step2Message, { parse_mode: "HTML" });
+      const kpayInfo = `👾<b>Kpay - 09771351671 [PKKA]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
+      await ctx.reply(
+        `✅ <b>Link လက်ခံပြီး</b>\n\n` +
+        kpayInfo + `\n\n` +
+        `📸 <b>KPay/Wave ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`,
+        { parse_mode: "HTML" }
+      );
       return;
     }
 
