@@ -993,16 +993,21 @@ export async function createBot() {
       const serviceLink = ctx.message && "text" in ctx.message ? ctx.message.text : "";
       if (!serviceLink) return;
 
-      await updateOrder(ctx.session.pendingOrderId, { targetInfo: serviceLink });
+      await updateOrder(ctx.session.pendingOrderId, { targetInfo: serviceLink, quantity: serviceLink });
       ctx.session.step = "waiting_tg_boost_receipt";
 
-      const kpayInfo = `👾<b>Kpay - 09771351671 [PKKA]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
-      await ctx.reply(
-        `✅ <b>Link လက်ခံပြီး</b>\n\n` +
-        kpayInfo + `\n\n` +
-        `📸 <b>KPay/Wave ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`,
-        { parse_mode: "HTML" }
-      );
+      const order = await getOrder(ctx.session.pendingOrderId);
+      if (!order) return;
+
+      const paymentMessage =
+        `📦 <b>𝗦𝗲𝗿𝘃𝗶𝗰𝗲</b>: <b>${escHtml(order.serviceName)}</b>\n` +
+        `🎯 <b>𝗣𝗮𝗰𝗸𝗮𝗴𝗲</b>: ${escHtml(serviceLink)}\n` +
+        `💰 <b>ငွေပမာဏ</b>: <b>${order.itemPrice.toLocaleString()} ks</b>\n\n` +
+        `👾<b>Kpay - 09771351671 [PKKA]</b>\n\n` +
+        `👻<b>Wave - 09697328391 [ZKK]</b>\n\n` +
+        `📸 <b>𝗞𝗣𝗮𝘆/𝗪𝗮𝘆 ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`;
+
+      await ctx.reply(paymentMessage, { parse_mode: "HTML" });
       return;
     }
 
