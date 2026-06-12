@@ -728,10 +728,9 @@ export async function createBot() {
       buySvcText = `${targetType === "uc" ? "🎮" : "💎"} <b>${escHtml(svc.name)}</b>\n\n` +
         `💰 ဝယ်ယူမည့် <b>${bs("Amount")}</b> ကို ရိုက်ထည့်ပါ:`;
     } else {
-      ctx.session.step = "waiting_target";
+      ctx.session.step = "waiting_general_step1";
       buySvcText = `📦 <b>${escHtml(svc.name)}</b>\n\n` +
-        kpayInfo + `\n\n` +
-        `📋 ဝယ်ယူလိုသော Service နှင့် လင့်တွဲပို့ပေးပါ`;
+        `📋 ဝယ်ယူလိုသော <b>Service</b> နှင့် <b>Link/မှတ်ချက်</b> တွဲပို့ပေးပါ`;
     }
 
     try {
