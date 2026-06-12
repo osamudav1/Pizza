@@ -1011,6 +1011,30 @@ export async function createBot() {
       return;
     }
 
+    // ── User flow: General Step 1 (link/info → summary → receipt) ──
+    if (ctx.session.step === "waiting_general_step1" && ctx.session.pendingOrderId) {
+      const info = ctx.message && "text" in ctx.message ? ctx.message.text : "";
+      if (!info) return;
+
+      await updateOrder(ctx.session.pendingOrderId, { targetInfo: info, quantity: info });
+      ctx.session.step = "waiting_receipt";
+
+      const order = await getOrder(ctx.session.pendingOrderId);
+      if (!order) return;
+
+      const paymentMessage =
+        `📦 <b>𝗦𝗲𝗿𝘃𝗶𝗰𝗲</b>: <b>${escHtml(order.serviceName)}</b>\n` +
+        `🎯 <b>𝗣𝗮𝗰𝗸𝗮𝗴𝗲</b>: ${escHtml(order.itemLabel)}\n` +
+        `📋 <b>မှတ်ချက်</b>: ${escHtml(info)}\n` +
+        `💰 <b>ငွေပမာဏ</b>: <b>${order.itemPrice.toLocaleString()} ks</b>\n\n` +
+        `👾<b>Kpay - 09771351671 [PKKA]</b>\n\n` +
+        `👻<b>Wave - 09697328391 [ZKK]</b>\n\n` +
+        `📸 <b>𝗞𝗣𝗮𝘀/𝗪𝗮𝘃𝗲 ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`;
+
+      await ctx.reply(paymentMessage, { parse_mode: "HTML" });
+      return;
+    }
+
     // ── User flow: Telegram Boost Step 2 (Service Details) ──
     if (ctx.session.step === "waiting_tg_boost_step2" && ctx.session.pendingOrderId) {
       const serviceDetails = ctx.message && "text" in ctx.message ? ctx.message.text : "";
