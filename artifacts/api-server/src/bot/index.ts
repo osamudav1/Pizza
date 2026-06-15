@@ -669,7 +669,7 @@ export async function createBot() {
       ctx.session.step = "waiting_tg_star_username";
       // Update the order with the selected item's price and label initially
       await updateOrder(orderId, { itemPrice: item.price, itemLabel: item.label });
-      buyText = orderHeader + `📦 <b>Boost</b>\n\n📋 star ထည့်ပေးရမယ် Acc Username ပို့ပေးပါ`;
+      buyText = orderHeader + `📦 <b>Telegram Star</b>\n\n📋 star ထည့်ပေးရမယ် Acc Username ပို့ပေးပါ`;
     } else if (targetType === "general") {
       ctx.session.step = "waiting_general_step1";
       buyText = orderHeader + `📋 ဝယ်ယူလိုသော Service နှင့် လင့်တွဲပို့ပေးပါ`;
@@ -731,7 +731,7 @@ export async function createBot() {
     } else if (targetType === "tg_star") {
       ctx.session.step = "waiting_tg_star_username";
       // For buy_service path, we don't have a specific item price yet, but we'll use the user-entered amount
-      buySvcText = `📦 <b>Boost</b>\n\n📋 star ထည့်ပေးရမယ် Acc Username ပို့ပေးပါ`;
+      buySvcText = `📦 <b>Telegram Star</b>\n\n📋 star ထည့်ပေးရမယ် Acc Username ပို့ပေးပါ`;
     } else if (targetType === "uc" || targetType === "dia") {
       ctx.session.step = "v2_waiting_amount";
       buySvcText = `${targetType === "uc" ? "🎮" : "💎"} <b>${escHtml(svc.name)}</b>\n\n` +
