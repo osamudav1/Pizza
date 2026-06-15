@@ -171,6 +171,7 @@ export function adminTargetTypeKeyboard(svcId: string): InlineKeyboard {
     .add(btn(`🎮 UC (PUBG)`, `admin:target:${svcId}:uc`)).row()
     .add(btn(`💎 Diamonds / ML`, `admin:target:${svcId}:dia`)).row()
     .add(btn(`📋 မှတ်ချက်ရေးရန် (General)`, `admin:target:${svcId}:general`)).row()
+    .add(btn(`⭐ Tg star`, `admin:target:${svcId}:tg_star`)).row()
     .add(btn(`📞 Contact Owner`, `admin:target:${svcId}:contact`)).row()
     .add(btn(`🔙 Back`, `admin:svc:${svcId}`)).row();
 }
@@ -181,6 +182,7 @@ export function adminNewSvcTargetKeyboard(): InlineKeyboard {
     .add(btn(`🎮 UC (PUBG)`, `admin:addcat:uc`)).row()
     .add(btn(`💎 Diamonds / ML (Dia)`, `admin:addcat:dia`)).row()
     .add(btn(`📋 မှတ်ချက်ရေးရန် (General)`, `admin:addcat:general`)).row()
+    .add(btn(`⭐ Tg star`, `admin:addcat:tg_star`)).row()
     .add(btn(`📞 Contact (ဆက်သွယ်)`, `admin:addcat:contact`)).row()
     .add(btn(`❌ ဖျက်မည်`, "admin:cancel")).row();
 }

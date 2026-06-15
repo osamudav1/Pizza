@@ -665,6 +665,9 @@ export async function createBot() {
       ctx.session.pendingOrderId = undefined;
       buyText = `📞 <b>${escHtml(item.label)}</b>\n\nဤ service အတွက် owner ထံ တိုက်ရိုက်ဆက်သွယ်ပေးပါ`;
       buyKb = contactOwnerKeyboard();
+    } else if (targetType === "tg_star") {
+      ctx.session.step = "waiting_general_step1";
+      buyText = orderHeader + `📦 <b>Boost</b>\n\n📋 star ထည့်ပေးရမယ် Acc Username ပို့ပေးပါ`;
     } else if (targetType === "general") {
       ctx.session.step = "waiting_general_step1";
       buyText = orderHeader + `📋 ဝယ်ယူလိုသော Service နှင့် လင့်တွဲပို့ပေးပါ`;
@@ -723,6 +726,9 @@ export async function createBot() {
         `📦 <b>${escHtml(svc.name)}</b>\n\n` +
         `📋 ဝယ်ယူလိုသော <b>Service</b> နှင့် <b>Link</b> တွဲပို့ပေးပါ\n\n` +
         `<i>ဥပမာ: 1k Subscribers - https://t.me/yourchannel</i>`;
+    } else if (targetType === "tg_star") {
+      ctx.session.step = "waiting_general_step1";
+      buySvcText = `📦 <b>Boost</b>\n\n📋 star ထည့်ပေးရမယ် Acc Username ပို့ပေးပါ`;
     } else if (targetType === "uc" || targetType === "dia") {
       ctx.session.step = "v2_waiting_amount";
       buySvcText = `${targetType === "uc" ? "🎮" : "💎"} <b>${escHtml(svc.name)}</b>\n\n` +

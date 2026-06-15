@@ -73,6 +73,7 @@ async function ensureDefaults() {
         id: "tg_star",
         name: "⭐ Telegram Stars",
         category: "main",
+        targetType: "tg_star",
         items: [
           { id: "tg_star_50", label: "50 Stars", price: 3000, unit: "ks" },
           { id: "tg_star_100", label: "100 Stars", price: 5500, unit: "ks" },
