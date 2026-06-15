@@ -50,7 +50,12 @@ export function formatReceiptNotification(params: {
   msg += `🆔 <b>𝗢𝗿𝗱𝗲𝗿 𝗜𝗗</b>: <code>${params.orderId}</code>\n`;
   msg += `📦 <b>𝗦𝗲𝗿𝘃𝗶𝗰𝗲</b>: ${params.serviceName}\n`;
   if (params.targetInfo) {
-    const label = params.serviceName?.toLowerCase().includes("star") || params.serviceName?.toLowerCase().includes("boost") ? "📋 <b>𝗜𝗻𝗳𝗼</b>" : "🎮 <b>𝗚𝗮𝗺𝗲 𝗜𝗗</b>";
+    let label = "🎮 <b>𝗚𝗮𝗺𝗲 𝗜𝗗</b>";
+    if (params.serviceName?.toLowerCase().includes("star")) {
+      label = "👤 <b>𝗨𝘀𝗲𝗿𝗻𝗮𝗺𝗲</b>";
+    } else if (params.serviceName?.toLowerCase().includes("boost")) {
+      label = "📋 <b>𝗜𝗻𝗳𝗼</b>";
+    }
     msg += `${label}: <code>${params.targetInfo}</code>\n`;
   }
   msg += `🎯 <b>𝗣𝗮𝗰𝗸𝗮𝗴𝗲</b>: ${params.itemLabel}\n`;

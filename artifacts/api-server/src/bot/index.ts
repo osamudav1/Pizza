@@ -666,7 +666,7 @@ export async function createBot() {
       buyText = `📞 <b>${escHtml(item.label)}</b>\n\nဤ service အတွက် owner ထံ တိုက်ရိုက်ဆက်သွယ်ပေးပါ`;
       buyKb = contactOwnerKeyboard();
     } else if (targetType === "tg_star") {
-      ctx.session.step = "waiting_general_step1";
+      ctx.session.step = "waiting_tg_star_username";
       buyText = orderHeader + `📦 <b>Boost</b>\n\n📋 star ထည့်ပေးရမယ် Acc Username ပို့ပေးပါ`;
     } else if (targetType === "general") {
       ctx.session.step = "waiting_general_step1";
@@ -727,7 +727,7 @@ export async function createBot() {
         `📋 ဝယ်ယူလိုသော <b>Service</b> နှင့် <b>Link</b> တွဲပို့ပေးပါ\n\n` +
         `<i>ဥပမာ: 1k Subscribers - https://t.me/yourchannel</i>`;
     } else if (targetType === "tg_star") {
-      ctx.session.step = "waiting_general_step1";
+      ctx.session.step = "waiting_tg_star_username";
       buySvcText = `📦 <b>Boost</b>\n\n📋 star ထည့်ပေးရမယ် Acc Username ပို့ပေးပါ`;
     } else if (targetType === "uc" || targetType === "dia") {
       ctx.session.step = "v2_waiting_amount";
@@ -1011,6 +1011,42 @@ export async function createBot() {
         `👾<b>Kpay - 09771351671 [PKKA]</b>\n\n` +
         `👻<b>Wave - 09697328391 [ZKK]</b>\n\n` +
         `📸 <b>𝗞𝗣𝗮𝘆/𝗪𝗮𝘆 ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`;
+
+      await ctx.reply(paymentMessage, { parse_mode: "HTML" });
+      return;
+    }
+
+    // ── User flow: Tg Star Username ──
+    if (ctx.session.step === "waiting_tg_star_username" && ctx.session.pendingOrderId) {
+      const username = ctx.message && "text" in ctx.message ? ctx.message.text : "";
+      if (!username) return;
+
+      await updateOrder(ctx.session.pendingOrderId, { targetInfo: username });
+      ctx.session.step = "waiting_tg_star_amount";
+      await ctx.reply(`💰 ဝယ်ယူမည့် <b>${bs("Amount")}</b> ကို ရိုက်ထည့်ပါ:`, { parse_mode: "HTML" });
+      return;
+    }
+
+    // ── User flow: Tg Star Amount ──
+    if (ctx.session.step === "waiting_tg_star_amount" && ctx.session.pendingOrderId) {
+      const amount = ctx.message && "text" in ctx.message ? ctx.message.text : "";
+      if (!amount) return;
+
+      await updateOrder(ctx.session.pendingOrderId, { quantity: amount });
+      ctx.session.step = "waiting_receipt";
+
+      const order = await getOrder(ctx.session.pendingOrderId);
+      if (!order) return;
+
+      const kpayInfo = `👾<b>Kpay - 09771351671 [PKKA]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
+      const paymentMessage =
+        `📦 <b>𝗦𝗲𝗿𝘃𝗶𝗰𝗲</b>: <b>${escHtml(order.serviceName)}</b>\n` +
+        `🎯 <b>𝗣𝗮𝗰𝗸𝗮𝗴𝗲</b>: ${escHtml(order.itemLabel)}\n` +
+        `👤 <b>𝗨𝘀𝗲𝗿𝗻𝗮𝗺𝗲</b>: ${escHtml(order.targetInfo || "")}\n` +
+        `📊 <b>𝗔𝗺𝗼𝘂𝗻𝘁</b>: ${escHtml(amount)}\n` +
+        `💰 <b>ငွေပမာဏ</b>: <b>${order.itemPrice.toLocaleString()} ks</b>\n\n` +
+        `${kpayInfo}\n\n` +
+        `📸 <b>𝗞𝗣𝗮𝘆/𝗪𝗮𝘃𝗲 ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`;
 
       await ctx.reply(paymentMessage, { parse_mode: "HTML" });
       return;
