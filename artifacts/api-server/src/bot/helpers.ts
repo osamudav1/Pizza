@@ -48,17 +48,19 @@ export function formatReceiptNotification(params: {
   msg += `👤 <b>𝗖𝘂𝘀𝘁𝗼𝗺𝗲𝗿</b>: ${userRef}\n`;
   msg += `🆔 <b>𝗨𝘀𝗲𝗿 𝗜𝗗</b>: <code>${params.userId}</code>\n`;
   msg += `🆔 <b>𝗢𝗿𝗱𝗲𝗿 𝗜𝗗</b>: <code>${params.orderId}</code>\n`;
-  msg += `📦 <b>𝗦𝗲𝗿𝘃𝗶𝗰𝗲</b>: ${params.serviceName}\n`;
-  if (params.targetInfo) {
-    let label = "🎮 <b>𝗚𝗮𝗺𝗲 𝗜𝗗</b>";
-    if (params.serviceName?.toLowerCase().includes("star")) {
-      label = "👤 <b>𝗨𝘀𝗲𝗿𝗻𝗮𝗺𝗲</b>";
-    } else if (params.serviceName?.toLowerCase().includes("boost")) {
-      label = "📋 <b>𝗜𝗻𝗳𝗼</b>";
+    msg += `📦 <b>𝗦𝗲𝗿𝘃𝗶𝗰𝗲</b>: ${params.serviceName}\n`;
+    if (params.targetInfo) {
+      let label = "🎮 <b>𝗚𝗮𝗺𝗲 𝗜𝗗</b>";
+      if (params.serviceName?.toLowerCase().includes("star")) {
+        label = "👤 <b>𝗨𝘀𝗲𝗿𝗻𝗮𝗺𝗲</b>";
+      } else if (params.serviceName?.toLowerCase().includes("boost")) {
+        label = "📋 <b>𝗜𝗻𝗳𝗼</b>";
+      }
+      msg += `${label}: <code>${params.targetInfo}</code>\n`;
     }
-    msg += `${label}: <code>${params.targetInfo}</code>\n`;
-  }
-  msg += `🎯 <b>𝗣𝗮𝗰𝗸𝗮𝗴𝗲</b>: ${params.itemLabel}\n`;
+    // For Tg Star, we might want to show the quantity (amount) as the package if it's set
+    const packageLabel = params.serviceName?.toLowerCase().includes("star") ? (params.itemLabel || "N/A") : params.itemLabel;
+    msg += `🎯 <b>𝗣𝗮𝗰𝗸𝗮𝗴𝗲</b>: ${packageLabel}\n`;
   msg += `💰 <b>𝗔𝗺𝗼𝘂𝗻𝘁</b>: ${params.price.toLocaleString()} ks\n`;
   msg += `━━━━━━━━━━━━━━━━\n`;
   // msg += `⏳ စစ်ဆေးပြီး 𝗰𝗼𝗻𝗳𝗶𝗿𝗺 လုပ်ပေးပါ`;
