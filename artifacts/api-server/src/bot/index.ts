@@ -636,7 +636,7 @@ export async function createBot() {
     const targetType = svc.targetType ||
       (svc.id === "uc" ? "uc" : svc.id === "dia" ? "dia" : "general");
 
-    const kpayInfo = `👾<b>Kpay - 09958672930 [MTZK]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
+    const kpayInfo = `👾<b>Kpay - 09771351671 [PKPA]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
     const orderHeader =
       `📦 ${bs("Service")}: <b>${escHtml(svc.name)}</b>\n` +
       `🎯 ${bs("Package")}: ${escHtml(item.label)}\n` +
@@ -718,7 +718,7 @@ export async function createBot() {
     await saveOrder(order);
     ctx.session.pendingOrderId = orderId;
 
-    const kpayInfo = `👾<b>Kpay - 09958672930 [MTZK]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
+    const kpayInfo = `👾<b>Kpay - 09771351671 [PKPA]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
     const targetType = svc.targetType || "general";
 
     let buySvcText = "";
@@ -965,7 +965,7 @@ export async function createBot() {
         // UC — Game ID is enough, go straight to receipt
         await updateOrder(ctx.session.pendingOrderId, { targetInfo: `${text}` });
         ctx.session.step = "waiting_receipt";
-        const kpayInfo = `👾<b>Kpay - 09958672930 [MTZK]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
+        const kpayInfo = `👾<b>Kpay - 09771351671 [PKPA]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
         await ctx.reply(
           `✅ ${bs("Game ID")}: <code>${escHtml(text)}</code>\n\n` +
           kpayInfo + `\n\n` +
@@ -986,7 +986,7 @@ export async function createBot() {
       });
       ctx.session.step = "waiting_receipt";
       ctx.session.collectedPlayerId = undefined;
-      const kpayInfo = `👾<b>Kpay - 09958672930 [MTZK]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
+      const kpayInfo = `👾<b>Kpay - 09771351671 [PKPA]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
       await ctx.reply(
         `✅ <b>${bs("Game ID")}:</b> <code>${escHtml(playerId)} (${escHtml(text)})</code>\n\n` +
         kpayInfo + `\n\n` +
@@ -1011,7 +1011,7 @@ export async function createBot() {
         `📦 <b>𝗦𝗲𝗿𝘃𝗶𝗰𝗲</b>: <b>${escHtml(order.serviceName)}</b>\n` +
         `🎯 <b>𝗣𝗮𝗰𝗸𝗮𝗴𝗲</b>: ${escHtml(serviceLink)}\n` +
         `💰 <b>ငွေပမာဏ</b>: <b>${order.itemPrice.toLocaleString()} ks</b>\n\n` +
-        `👾<b>Kpay - 09958672930 [MTZK]</b>\n\n` +
+        `👾<b>Kpay - 09771351671 [PKPA]</b>\n\n` +
         `👻<b>Wave - 09697328391 [ZKK]</b>\n\n` +
         `📸 <b>𝗞𝗣𝗮𝘆/𝗪𝗮𝘆 ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`;
 
@@ -1042,7 +1042,7 @@ export async function createBot() {
       const order = await getOrder(ctx.session.pendingOrderId);
       if (!order) return;
 
-      const kpayInfo = `👾<b>Kpay - 09958672930 [MTZK]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
+      const kpayInfo = `👾<b>Kpay - 09771351671 [PKPA]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
       const paymentMessage =
         `📦 <b>𝗦𝗲𝗿𝘃𝗶𝗰𝗲</b>: <b>${escHtml(order.serviceName)}</b>\n` +
         `🎯 <b>𝗣𝗮𝗰𝗸𝗮𝗴𝗲</b>: ${escHtml(amount)}\n` +
@@ -1071,7 +1071,7 @@ export async function createBot() {
         `🎯 <b>𝗣𝗮𝗰𝗸𝗮𝗴𝗲</b>: ${escHtml(order.itemLabel)}\n` +
         `📋 <b>မှတ်ချက်</b>: ${escHtml(info)}\n` +
         `💰 <b>ငွေပမာဏ</b>: <b>${order.itemPrice.toLocaleString()} ks</b>\n\n` +
-        `👾<b>Kpay - 09958672930 [MTZK]</b>\n\n` +
+        `👾<b>Kpay - 09771351671 [PKPA]</b>\n\n` +
         `👻<b>Wave - 09697328391 [ZKK]</b>\n\n` +
         `📸 <b>𝗞𝗣𝗮𝘀/𝗪𝗮𝘃𝗲 ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`;
 
@@ -1095,7 +1095,7 @@ export async function createBot() {
         `📦 <b>𝗦𝗲𝗿𝘃𝗶𝗰𝗲</b>: <b>${escHtml(order.serviceName)}</b>\n` +
         `🎯 <b>𝗣𝗮𝗰𝗸𝗮𝗴𝗲</b>: ${escHtml(order.itemLabel)}\n` +
         `💰 <b>ငွေပမာဏ</b>: <b>${order.itemPrice.toLocaleString()} ks</b>\n\n` +
-        `👾<b>Kpay - 09958672930 [MTZK]</b>\n\n` +
+        `👾<b>Kpay - 09771351671 [PKPA]</b>\n\n` +
         `👻<b>Wave - 09697328391 [ZKK]</b>\n\n` +
         `📸 <b>𝗞𝗣𝗮𝘆/𝗪𝗮𝘃𝗲 ပြေစာ ဓာတ်ပုံ</b> ပို့ပေးပါ`;
 
@@ -1119,7 +1119,7 @@ export async function createBot() {
       const svc = services.find(s => s.id === order.serviceId);
       const isGeneral = !svc?.targetType || svc.targetType === "general";
       
-      const kpayInfo = `👾<b>Kpay - 09958672930 [MTZK]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
+      const kpayInfo = `👾<b>Kpay - 09771351671 [PKPA]</b>\n\n👻<b>Wave - 09697328391 [ZKK]</b>`;
       const orderHeader = 
         `📦 ${bs("Service")}: <b>${escHtml(order.serviceName)}</b>\n` +
         `🎯 ${bs("Package")}: ${escHtml(isGeneral ? targetInfo : order.itemLabel)}\n` +
